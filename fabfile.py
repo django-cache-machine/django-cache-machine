@@ -28,8 +28,7 @@ def doc(kind='html'):
 
 
 def test():
-    local("""python -c "import sys; print '\\n'.join(sys.path)" """)
-    local('django-admin.py test -s')
+    local('django-admin.py test')
 
 
 def updoc():
