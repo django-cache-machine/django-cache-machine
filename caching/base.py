@@ -143,14 +143,26 @@ class CacheMachine(object):
 
 class CachingQuerySet(models.query.QuerySet):
 
+    def query_key(self):
+        sql, params = self.query.get_compiler(using=self.db).as_sql()
+        return sql % params
+
     def iterator(self):
         # Work-around for Django #12717.
-        sql, params = self.query.get_compiler(using=self.db).as_sql()
-        query_string = sql % params
+        query_string = self.query_key()
         iterator = super(CachingQuerySet, self).iterator
         for obj in CacheMachine(query_string, iterator):
             yield obj
         raise StopIteration
+
+    def count(self):
+        timeout = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
+        super_count = super(CachingQuerySet, self).count
+        query_string = 'count:%s' % self.query_key()
+        if timeout is None:
+            return super_count()
+        else:
+            return cached(super_count, query_string, timeout)
 
 
 def flush_key(obj):

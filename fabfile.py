@@ -28,7 +28,7 @@ def doc(kind='html'):
 
 
 def test():
-    local('django-admin.py test')
+    local('django-admin.py test -s')
 
 
 def updoc():

@@ -1,5 +1,7 @@
+from django.conf import settings
 from django.core.cache import cache
 
+import mock
 from nose.tools import eq_
 
 from test_utils import ExtraAppTestCase
@@ -14,6 +16,10 @@ class CachingTestCase(ExtraAppTestCase):
 
     def setUp(self):
         cache.clear()
+        self.old_timeout = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
+
+    def tearDown(self):
+        settings.CACHE_COUNT_TIMEOUT = self.old_timeout
 
     def test_flush_key(self):
         """flush_key should work for objects or strings."""
@@ -97,3 +103,23 @@ class CachingTestCase(ExtraAppTestCase):
 
         raw2 = list(Addon.objects.raw(sql, [2]))[0]
         eq_(raw2.id, 2)
+
+    @mock.patch('caching.base.cache')
+    def test_count_cache(self, cache_mock):
+        settings.CACHE_COUNT_TIMEOUT = 60
+        cache_mock.scheme = 'memcached'
+        cache_mock.get.return_value = None
+
+        q = Addon.objects.all()
+        count = q.count()
+
+        args, kwargs = cache_mock.set.call_args
+        key, value, timeout = args
+        eq_(value, 2)
+        eq_(timeout, 60)
+
+    @mock.patch('caching.base.cached')
+    def test_count_none_timeout(self, cached_mock):
+        settings.CACHE_COUNT_TIMEOUT = None
+        Addon.objects.count()
+        eq_(cached_mock.call_count, 0)

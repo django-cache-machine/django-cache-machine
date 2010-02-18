@@ -36,6 +36,14 @@ If you want to set a prefix for all keys in Cache Machine, define
 
     CACHE_PREFIX = 'weee:'
 
+Calls to ``QuerySet.count()`` can be cached, but they cannot be reliably
+invalidated.  Cache Machine would have to do a full select to figure out the
+object keys, which is probably much more data than you want to pull.  I
+recommend a short cache timeout; long enough to avoid repetitive queries, but
+short enough that stale counts won't be a big deal.  ::
+
+    CACHE_COUNT_TIMEOUT = 60  # seconds, not too long.
+
 
 Cache Manager
 -------------
@@ -71,8 +79,7 @@ once iteration is done.
 
 Caching is supported for normal :class:`QuerySets <django.db.models.QuerySet>` and
 for :meth:`django.db.models.Manager.raw`.  At this time, caching has not been
-implemented for ``QuerySet.count``, ``QuerySet.values``, or
-``QuerySet.values_list``.
+implemented for ``QuerySet.values`` or ``QuerySet.values_list``.
 
 To support easy cache invalidation, we use "flush lists" to mark the cached
 queries an object belongs to.  That way, all queries where an object was found
