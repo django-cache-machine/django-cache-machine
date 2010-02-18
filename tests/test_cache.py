@@ -24,7 +24,6 @@ class CachingTestCase(ExtraAppTestCase):
     def test_flush_key(self):
         """flush_key should work for objects or strings."""
         a = Addon.objects.get(id=1)
-        eq_(caching.flush_key(a), 'flush:%s' % a.cache_key)
         eq_(caching.flush_key(a.cache_key), caching.flush_key(a))
 
     def test_cache_key(self):
@@ -123,3 +122,13 @@ class CachingTestCase(ExtraAppTestCase):
         settings.CACHE_COUNT_TIMEOUT = None
         Addon.objects.count()
         eq_(cached_mock.call_count, 0)
+
+    def test_queryset_flush_list(self):
+        """Check that we're making a flush list for the queryset."""
+        q = Addon.objects.all()
+        assert cache.get(q.flush_key()) is None
+        objects = list(q)  # Evaluate the queryset so it gets cached.
+
+        query_key = cache.get(q.flush_key())
+        assert query_key is not None
+        eq_(list(cache.get(query_key[0])), objects)

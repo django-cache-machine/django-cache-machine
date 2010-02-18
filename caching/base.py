@@ -9,6 +9,7 @@ from django.db.models.sql import query
 from django.utils import translation, encoding
 
 FOREVER = 0
+FLUSH = 'flush:'
 
 log = logging.getLogger('z.caching')
 
@@ -49,7 +50,7 @@ class CachingManager(models.Manager):
         # object includes a foreign key.
         for flush_list in cache.get_many(keys).values():
             if flush_list is not None:
-                keys.update(k for k in flush_list if k.startswith('flush:'))
+                keys.update(k for k in flush_list if k.startswith(FLUSH))
 
         flush = set()
         for flush_list in cache.get_many(set(keys)).values():
@@ -118,9 +119,15 @@ class CacheMachine(object):
         query_key = self.query_key()
         cache.add(query_key, objects)
 
+        # Add this query to the flush list of each object.  We include
+        # query_flush so that other things can be cached against the queryset
+        # and still participate in invalidation.
         flush_keys = map(flush_key, objects)
-        add_to_flush_list(flush_keys, query_key)
+        query_flush = flush_key(self.query_string)
+        add_to_flush_list(flush_keys + [query_flush], query_key)
+        add_to_flush_list(flush_keys, query_flush)
 
+        # Add each object to the flush lists of its foreign keys.
         for obj in objects:
             obj_flush = flush_key(obj)
             keys = map(flush_key, obj._cache_keys())
@@ -129,6 +136,9 @@ class CacheMachine(object):
 
 
 class CachingQuerySet(models.query.QuerySet):
+
+    def flush_key(self):
+        return flush_key(self.query_key())
 
     def query_key(self):
         sql, params = self.query.get_compiler(using=self.db).as_sql()
@@ -193,7 +203,7 @@ class CachingRawQuerySet(models.query.RawQuerySet):
 def flush_key(obj):
     """We put flush lists in the flush: namespace."""
     key = obj if isinstance(obj, basestring) else obj.cache_key
-    return 'flush:%s' % key
+    return FLUSH + make_key(key)
 
 
 def add_to_flush_list(flush_keys, new_key):
@@ -202,9 +212,9 @@ def add_to_flush_list(flush_keys, new_key):
     flush_lists.update(cache.get_many(flush_keys))
     for key, list_ in flush_lists.items():
         if list_ is None:
-            flush_lists[key] = [new_key]
+            flush_lists[key] = set([new_key])
         else:
-            list_.append(new_key)
+            list_.add(new_key)
     cache.set_many(flush_lists)
 
 
