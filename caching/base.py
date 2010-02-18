@@ -115,20 +115,7 @@ class CacheMachine(object):
         # Adding to the flush lists has a race condition: if simultaneous
         # processes are adding to the same list, one of the query keys will be
         # dropped.  Using redis would be safer.
-
-        def add_to_flush_list(flush_keys, new_key):
-            """Add new_key to all the flush lists keyed by flush_keys."""
-            flush_lists = dict((key, None) for key in flush_keys)
-            flush_lists.update(cache.get_many(flush_keys))
-            for key, list_ in flush_lists.items():
-                if list_ is None:
-                    flush_lists[key] = [new_key]
-                else:
-                    list_.append(new_key)
-            cache.set_many(flush_lists)
-
         query_key = self.query_key()
-
         cache.add(query_key, objects)
 
         flush_keys = map(flush_key, objects)
@@ -163,12 +150,6 @@ class CachingQuerySet(models.query.QuerySet):
             return super_count()
         else:
             return cached(super_count, query_string, timeout)
-
-
-def flush_key(obj):
-    """We put flush lists in the flush: namespace."""
-    key = obj if isinstance(obj, basestring) else obj.cache_key
-    return 'flush:%s' % key
 
 
 class CachingMixin:
@@ -207,6 +188,24 @@ class CachingRawQuerySet(models.query.RawQuerySet):
         for obj in CacheMachine(sql, iterator):
             yield obj
         raise StopIteration
+
+
+def flush_key(obj):
+    """We put flush lists in the flush: namespace."""
+    key = obj if isinstance(obj, basestring) else obj.cache_key
+    return 'flush:%s' % key
+
+
+def add_to_flush_list(flush_keys, new_key):
+    """Add new_key to all the flush lists keyed by flush_keys."""
+    flush_lists = dict((key, None) for key in flush_keys)
+    flush_lists.update(cache.get_many(flush_keys))
+    for key, list_ in flush_lists.items():
+        if list_ is None:
+            flush_lists[key] = [new_key]
+        else:
+            list_.append(new_key)
+    cache.set_many(flush_lists)
 
 
 def make_key(k):
