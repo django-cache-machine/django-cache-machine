@@ -116,6 +116,37 @@ while abstracting a few repetitive elements.
 .. autofunction:: caching.base.cached
 
 
+Template Caching
+----------------
+
+Cache Machine includes a Jinja2 extension to cache template fragments based on
+a queryset.  These fragments will get invalidated based on the objects inside
+the queryset, just like ``CachingQuerySets``.
+
+First, add it to your template environment::
+
+    env = jinja2.Environment(extensions=['caching.ext.cache'])
+
+.. highlight:: jinja
+
+Now wrap all your queryset looping with the ``cache`` tag. ::
+
+    {% cache objects %}  {# objects is a CachingQuerySet #}
+      {% for obj in objects %}
+        ...
+      {% endfor %}
+    {% endcache %}
+
+The tag can take an optional timeout. ::
+
+    {% cache objects, 500 %}
+
+.. highlight:: python
+
+If someone wants to write a template tag for Django templates, I'd love to add
+it.
+
+
 Classes that May Interest You
 -----------------------------
 

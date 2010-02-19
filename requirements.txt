@@ -6,3 +6,4 @@ mock
 python-memcached
 -e git://github.com/jbalogh/test-utils.git#egg=test-utils
 fabric
+jinja2

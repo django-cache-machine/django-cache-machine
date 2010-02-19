@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.cache import cache
 
+import jinja2
 import mock
 from nose.tools import eq_
 
@@ -131,4 +132,40 @@ class CachingTestCase(ExtraAppTestCase):
 
         query_key = cache.get(q.flush_key())
         assert query_key is not None
-        eq_(list(cache.get(query_key[0])), objects)
+        eq_(list(cache.get(query_key.pop())), objects)
+
+    def test_jinja_cache_tag(self):
+        env = jinja2.Environment(extensions=['caching.ext.cache'])
+        def check(q, expected):
+            list(q) # Get the queryset in cache.
+            t = env.from_string(
+                "{% cache q %}{% for x in q %}{{ x.id }}:{{ x.val }};"
+                "{% endfor %}{% endcache %}")
+            s = t.render(q=q)
+
+            eq_(s, expected)
+
+            # Check the flush keys, find the key for the template.
+            flush = cache.get(q.flush_key())
+            eq_(len(flush), 2)
+
+            # Cehck the cached fragment.  The key happens to be the first one,
+            # according to however set arranges them.
+            key = list(flush)[0]
+            cached = cache.get(key)
+            eq_(s, cached)
+
+        check(Addon.objects.all(), '1:42;2:42;')
+        check(Addon.objects.all(), '1:42;2:42;')
+
+        # Make changes, make sure we dropped the cached fragment.
+        a = Addon.objects.get(id=1)
+        a.val = 17
+        a.save()
+
+        q = Addon.objects.all()
+        flush = cache.get(q.flush_key())
+        assert cache.get(q.flush_key()) is None
+
+        check(Addon.objects.all(), '1:17;2:42;')
+        check(Addon.objects.all(), '1:17;2:42;')
