@@ -122,14 +122,14 @@ class CacheMachine(object):
         # Add this query to the flush list of each object.  We include
         # query_flush so that other things can be cached against the queryset
         # and still participate in invalidation.
-        flush_keys = map(flush_key, objects)
+        flush_keys = [o.flush_key() for o in objects]
         query_flush = flush_key(self.query_string)
         add_to_flush_list(flush_keys + [query_flush], query_key)
         add_to_flush_list(flush_keys, query_flush)
 
         # Add each object to the flush lists of its foreign keys.
         for obj in objects:
-            obj_flush = flush_key(obj)
+            obj_flush = obj.flush_key()
             keys = map(flush_key, obj._cache_keys())
             keys.remove(obj_flush)
             add_to_flush_list(keys, obj_flush)
@@ -164,6 +164,9 @@ class CachingQuerySet(models.query.QuerySet):
 
 class CachingMixin:
     """Inherit from this class to get caching and invalidation helpers."""
+
+    def flush_key(self):
+        return flush_key(self)
 
     @property
     def cache_key(self):

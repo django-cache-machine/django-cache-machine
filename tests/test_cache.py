@@ -134,7 +134,7 @@ class CachingTestCase(ExtraAppTestCase):
         assert query_key is not None
         eq_(list(cache.get(query_key.pop())), objects)
 
-    def test_jinja_cache_tag(self):
+    def test_jinja_cache_tag_queryset(self):
         env = jinja2.Environment(extensions=['caching.ext.cache'])
         def check(q, expected):
             list(q) # Get the queryset in cache.
@@ -149,7 +149,7 @@ class CachingTestCase(ExtraAppTestCase):
             flush = cache.get(q.flush_key())
             eq_(len(flush), 2)
 
-            # Cehck the cached fragment.  The key happens to be the first one,
+            # Check the cached fragment.  The key happens to be the first one,
             # according to however set arranges them.
             key = list(flush)[0]
             cached = cache.get(key)
@@ -169,3 +169,17 @@ class CachingTestCase(ExtraAppTestCase):
 
         check(Addon.objects.all(), '1:17;2:42;')
         check(Addon.objects.all(), '1:17;2:42;')
+
+    def test_jinja_cache_tag_object(self):
+        env = jinja2.Environment(extensions=['caching.ext.cache'])
+        addon = Addon.objects.get(id=1)
+
+        def check(obj, expected):
+            t = env.from_string(
+                '{% cache obj, 30 %}{{ obj.id }}:{{ obj.val }}{% endcache %}')
+            eq_(t.render(obj=obj), expected)
+
+        check(addon, '1:42')
+        addon.val = 17
+        addon.save()
+        check(addon, '1:17')

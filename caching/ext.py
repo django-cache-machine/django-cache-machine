@@ -32,18 +32,16 @@ class FragmentCacheExtension(Extension):
         # that line number to the nodes we create by hand.
         lineno = parser.stream.next().lineno
 
-        # Use the filename and queryset for the cache key.
+        # Use the filename and first object for the cache key.
         args = [nodes.Const(self.name), parser.parse_expression()]
 
-        # If there is a comma, the user provided a timeout.  If not use
+        # If there is a comma, the user provided a timeout.  If not, use
         # None as second parameter.
         if parser.stream.skip_if('comma'):
             args.append(parser.parse_expression())
         else:
             args.append(nodes.Const(None))
 
-        # now we parse the body of the cache block up to `endcache` and
-        # drop the needle (which would always be `endcache` in that case)
         body = parser.parse_statements(['name:endcache'], drop_needle=True)
 
         # now return a `CallBlock` node that calls our _cache_support
@@ -51,12 +49,17 @@ class FragmentCacheExtension(Extension):
         return nodes.CallBlock(self.call_method('_cache_support', args),
                                [], [], body).set_lineno(lineno)
 
-    def _cache_support(self, name, queryset, timeout, caller):
+    def _cache_support(self, name, obj, timeout, caller):
         """Cache helper callback."""
-        key = 'fragment:%s:%s' % (name, queryset.query_key())
+        if hasattr(obj, 'query_key'):
+            obj_key = obj.query_key()
+        else:
+            obj_key = obj.cache_key
+
+        key = 'fragment:%s:%s' % (name, obj_key)
         # Matches the key made in cached().
         flush = caching.base.make_key('f:%s' % key)
-        caching.base.add_to_flush_list([queryset.flush_key()], flush)
+        caching.base.add_to_flush_list([obj.flush_key()], flush)
         return caching.base.cached(caller, key, timeout)
 
 

@@ -120,8 +120,8 @@ Template Caching
 ----------------
 
 Cache Machine includes a Jinja2 extension to cache template fragments based on
-a queryset.  These fragments will get invalidated based on the objects inside
-the queryset, just like ``CachingQuerySets``.
+a queryset or cache-aware object.  These fragments will get invalidated on
+using the same rules as ``CachingQuerySets``.
 
 First, add it to your template environment::
 
@@ -135,6 +135,12 @@ Now wrap all your queryset looping with the ``cache`` tag. ::
       {% for obj in objects %}
         ...
       {% endfor %}
+    {% endcache %}
+
+...and for caching by single objects::
+
+    {% cache object %}
+      ...expensive processing...
     {% endcache %}
 
 The tag can take an optional timeout. ::
