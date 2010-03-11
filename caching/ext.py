@@ -34,8 +34,9 @@ class FragmentCacheExtension(Extension):
         # that line number to the nodes we create by hand.
         lineno = parser.stream.next().lineno
 
-        # Use the filename and first object for the cache key.
-        args = [nodes.Const(self.name), parser.parse_expression()]
+        # Use the filename + line number and first object for the cache key.
+        name = '%s+%s' % (self.name, lineno)
+        args = [nodes.Const(name), parser.parse_expression()]
 
         # If there is a comma, the user provided a timeout.  If not, use
         # None as second parameter.

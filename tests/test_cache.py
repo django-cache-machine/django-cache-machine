@@ -183,3 +183,18 @@ class CachingTestCase(ExtraAppTestCase):
         addon.val = 17
         addon.save()
         check(addon, '1:17')
+
+    def test_jinja_multiple_tags(self):
+        env = jinja2.Environment(extensions=['caching.ext.cache'])
+        addon = Addon.objects.get(id=1)
+        template = ("{% cache obj %}{{ obj.id }}{% endcache %}\n"
+                    "{% cache obj %}{{ obj.val }}{% endcache %}")
+
+        def check(obj, expected):
+            t = env.from_string(template)
+            eq_(t.render(obj=obj), expected)
+
+        check(addon, '1\n42')
+        addon.val = 17
+        addon.save()
+        check(addon, '1\n17')
