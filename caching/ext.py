@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from jinja2 import nodes
 from jinja2.ext import Extension
 
@@ -51,6 +53,9 @@ class FragmentCacheExtension(Extension):
 
     def _cache_support(self, name, obj, timeout, caller):
         """Cache helper callback."""
+        if settings.TEMPLATE_DEBUG:
+            return caller()
+
         if hasattr(obj, 'query_key'):
             obj_key = obj.query_key()
         else:
