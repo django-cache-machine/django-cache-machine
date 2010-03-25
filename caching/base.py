@@ -11,7 +11,7 @@ from django.utils import translation, encoding
 FOREVER = 0
 FLUSH = 'flush:'
 
-log = logging.getLogger('z.caching')
+log = logging.getLogger('caching')
 
 scheme, _, _ = parse_backend_uri(settings.CACHE_BACKEND)
 cache.scheme = scheme
