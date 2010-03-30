@@ -8,15 +8,23 @@ from django.db.models import signals
 from django.db.models.sql import query
 from django.utils import translation, encoding
 
-FOREVER = 0
-FLUSH = 'flush:'
+
+class NullHandler(logging.Handler):
+
+    def emit(self, record):
+        pass
+
 
 log = logging.getLogger('caching')
+log.setLevel(logging.INFO)
+log.addHandler(NullHandler())
+
+FOREVER = 0
+FLUSH = 'flush:'
+CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 
 scheme, _, _ = parse_backend_uri(settings.CACHE_BACKEND)
 cache.scheme = scheme
-
-CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 
 
 class CachingManager(models.Manager):
