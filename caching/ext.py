@@ -56,17 +56,8 @@ class FragmentCacheExtension(Extension):
         """Cache helper callback."""
         if settings.TEMPLATE_DEBUG:
             return caller()
-
-        if hasattr(obj, 'query_key'):
-            obj_key = obj.query_key()
-        else:
-            obj_key = obj.cache_key
-
-        key = 'fragment:%s:%s' % (name, obj_key)
-        # Matches the key made in cached().
-        flush = caching.base.make_key('f:%s' % key)
-        caching.base.add_to_flush_list([obj.flush_key()], flush)
-        return caching.base.cached(caller, key, timeout)
+        return caching.base.cached_with(obj, caller, 'fragment:' + name,
+                                        timeout)
 
 
 # Nice import name.

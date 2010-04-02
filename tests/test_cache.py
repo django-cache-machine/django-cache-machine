@@ -198,3 +198,48 @@ class CachingTestCase(ExtraAppTestCase):
         addon.val = 17
         addon.save()
         check(addon, '1\n17')
+
+    def test_cached_with(self):
+        counter = mock.Mock()
+        def expensive():
+            counter()
+            return counter.call_count
+
+        a = Addon.objects.get(id=1)
+        f = lambda: caching.cached_with(a, expensive, 'key')
+
+        # Only gets called once.
+        eq_(f(), 1)
+        eq_(f(), 1)
+
+        # Called again after flush.
+        a.save()
+        eq_(f(), 2)
+
+        counter.reset_mock()
+        q = Addon.objects.filter(id=1)
+        f = lambda: caching.cached_with(q, expensive, 'key')
+
+        # Only gets called once.
+        eq_(f(), 1)
+        eq_(f(), 1)
+
+        # Called again after flush.
+        list(q)[0].save()
+        eq_(f(), 2)
+        eq_(f(), 2)
+
+    def test_cached_method(self):
+        a = Addon.objects.get(id=1)
+        eq_(a.calls(), 1)
+        eq_(a.calls(), 1)
+
+        a.save()
+        # Still returns one since the value is attached to the object.
+        # The args and kwargs are ignored.
+        eq_(a.calls(2, xx=1), 1)
+        eq_(a.calls('xx'), 1)
+
+        a = Addon.objects.get(id=1)
+        eq_(a.calls(), 2)
+        eq_(a.calls(), 2)

@@ -1,3 +1,4 @@
+import functools
 import hashlib
 import logging
 
@@ -241,9 +242,13 @@ def make_key(k):
         return key
 
 
+def _function_cache_key(key):
+    return make_key('f:%s' % key)
+
+
 def cached(function, key_, duration=None):
     """Only calls the function if ``key`` is not already in the cache."""
-    key = make_key('f:%s' % key_)
+    key = _function_cache_key(key_)
     val = cache.get(key)
     if val is None:
         log.debug('cache miss for %s' % key)
@@ -252,3 +257,42 @@ def cached(function, key_, duration=None):
     else:
         log.debug('cache hit for %s' % key)
     return val
+
+
+def cached_with(obj, f, f_key, timeout=None):
+    """Helper for caching a function call within an object's flush list."""
+    obj_key = obj.query_key() if hasattr(obj, 'query_key') else obj.cache_key
+    key = '%s:%s' % (f_key, obj_key)
+    # Put the key generated in cached() into this object's flush list.
+    add_to_flush_list([obj.flush_key()], _function_cache_key(key))
+    return cached(f, key, timeout)
+
+
+class cached_method(object):
+    """
+    Decorator to cache a method call in this object's flush list.
+
+    After the first call the value comes directly from the object.
+    Lifted from werkzeug.
+    """
+    def __init__(self, func):
+        self.func = func
+        self.__name__ = func.__name__
+        self.__doc__ = func.__doc__
+
+    def __get__(self, obj, type=None):
+        if obj is None:
+            return self
+        _missing = object()
+        value = obj.__dict__.get(self.__name__, _missing)
+        if value is _missing:
+            self.obj = obj
+            return self.wrapper
+        return value
+
+    def wrapper(self, *args, **kwargs):
+        key = 'm:%s:%s:%s' % (self.__name__, args, kwargs)
+        f = functools.partial(self.func, self.obj, *args, **kwargs)
+        value = cached_with(self.obj, f, key)
+        self.obj.__dict__[self.__name__] = lambda *a, **kw: value
+        return value
