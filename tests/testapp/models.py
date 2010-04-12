@@ -23,6 +23,7 @@ class Addon(CachingMixin, models.Model):
     objects = CachingManager()
 
     @cached_method
-    def calls(self):
+    def calls(self, arg=1):
+        """This is a docstring for calls()"""
         call_counter()
-        return call_counter.call_count
+        return arg, call_counter.call_count

@@ -231,15 +231,21 @@ class CachingTestCase(ExtraAppTestCase):
 
     def test_cached_method(self):
         a = Addon.objects.get(id=1)
-        eq_(a.calls(), 1)
-        eq_(a.calls(), 1)
+        eq_(a.calls(), (1, 1))
+        eq_(a.calls(), (1, 1))
 
         a.save()
-        # Still returns one since the value is attached to the object.
-        # The args and kwargs are ignored.
-        eq_(a.calls(2, xx=1), 1)
-        eq_(a.calls('xx'), 1)
+        # Still returns 1 since the object has it's own local cache.
+        eq_(a.calls(), (1, 1))
+        eq_(a.calls(3), (3, 2))
 
         a = Addon.objects.get(id=1)
-        eq_(a.calls(), 2)
-        eq_(a.calls(), 2)
+        eq_(a.calls(), (1, 3))
+        eq_(a.calls(4), (4, 4))
+        eq_(a.calls(3), (3, 2))
+
+        b = Addon.objects.create(id=5, val=32, author1_id=1, author2_id=2)
+        eq_(b.calls(), (1, 5))
+
+        # Make sure we're updating the wrapper's docstring.
+        eq_(b.calls.__doc__, Addon.calls.__doc__)

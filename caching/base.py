@@ -272,13 +272,14 @@ class cached_method(object):
     """
     Decorator to cache a method call in this object's flush list.
 
-    After the first call the value comes directly from the object.
+    The external cache will only be used once per (instance, args).  After that
+    a local cache on the object will be used.
+
     Lifted from werkzeug.
     """
     def __init__(self, func):
         self.func = func
-        self.__name__ = func.__name__
-        self.__doc__ = func.__doc__
+        functools.update_wrapper(self, func)
 
     def __get__(self, obj, type=None):
         if obj is None:
@@ -286,13 +287,32 @@ class cached_method(object):
         _missing = object()
         value = obj.__dict__.get(self.__name__, _missing)
         if value is _missing:
-            self.obj = obj
-            return self.wrapper
+            w = MethodWrapper(obj, self.func)
+            obj.__dict__[self.__name__] = w
+            return w
         return value
 
-    def wrapper(self, *args, **kwargs):
-        key = 'm:%s:%s:%s' % (self.__name__, args, kwargs)
-        f = functools.partial(self.func, self.obj, *args, **kwargs)
-        value = cached_with(self.obj, f, key)
-        self.obj.__dict__[self.__name__] = lambda *a, **kw: value
-        return value
+
+class MethodWrapper(object):
+    """
+    Wraps around an object's method for two-level caching.
+
+    The first call for a set of (args, kwargs) will use an external cache.
+    After that, an object-local dict cache will be used.
+    """
+    def __init__(self, obj, func):
+        self.obj = obj
+        self.func = func
+        functools.update_wrapper(self, func)
+        self.cache = {}
+
+    def __call__(self, *args, **kwargs):
+        k = lambda o: o.cache_key if hasattr(o, 'cache_key') else o
+        arg_keys = map(k, args)
+        kwarg_keys = [(key, k(val)) for key, val in kwargs.items()]
+        key = 'm:%s:%s:%s:%s' % (self.obj.cache_key, self.func.__name__,
+                                 arg_keys, kwarg_keys)
+        if key not in self.cache:
+            f = functools.partial(self.func, self.obj, *args, **kwargs)
+            self.cache[key] = cached_with(self.obj, f, key)
+        return self.cache[key]
