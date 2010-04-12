@@ -1,3 +1,4 @@
+import collections
 import functools
 import hashlib
 import logging
@@ -133,15 +134,19 @@ class CacheMachine(object):
         # and still participate in invalidation.
         flush_keys = [o.flush_key() for o in objects]
         query_flush = flush_key(self.query_string)
-        add_to_flush_list(flush_keys + [query_flush], query_key)
-        add_to_flush_list(flush_keys, query_flush)
+
+        flush_lists = collections.defaultdict(list)
+        for key in flush_keys:
+            flush_lists[key].extend([query_key, query_flush])
+        flush_lists[query_flush].append(query_key)
 
         # Add each object to the flush lists of its foreign keys.
         for obj in objects:
             obj_flush = obj.flush_key()
-            keys = map(flush_key, obj._cache_keys())
-            keys.remove(obj_flush)
-            add_to_flush_list(keys, obj_flush)
+            for key in map(flush_key, obj._cache_keys()):
+                if key != obj_flush:
+                    flush_lists[key].append(obj_flush)
+        add_to_flush_list(flush_lists)
 
 
 class CachingQuerySet(models.query.QuerySet):
@@ -218,15 +223,15 @@ def flush_key(obj):
     return FLUSH + make_key(key)
 
 
-def add_to_flush_list(flush_keys, new_key):
-    """Add new_key to all the flush lists keyed by flush_keys."""
-    flush_lists = dict((key, None) for key in flush_keys)
-    flush_lists.update(cache.get_many(flush_keys))
-    for key, list_ in flush_lists.items():
-        if list_ is None:
-            flush_lists[key] = set([new_key])
+def add_to_flush_list(mapping):
+    """Update flush lists with the {flush_key: [query_key,...]} map."""
+    flush_lists = collections.defaultdict(set)
+    flush_lists.update(cache.get_many(mapping.keys()))
+    for key, list_ in mapping.items():
+        if flush_lists[key] is None:
+            flush_lists[key] = set(list_)
         else:
-            list_.add(new_key)
+            flush_lists[key].update(list_)
     cache.set_many(flush_lists)
 
 
@@ -264,7 +269,7 @@ def cached_with(obj, f, f_key, timeout=None):
     obj_key = obj.query_key() if hasattr(obj, 'query_key') else obj.cache_key
     key = '%s:%s' % (f_key, obj_key)
     # Put the key generated in cached() into this object's flush list.
-    add_to_flush_list([obj.flush_key()], _function_cache_key(key))
+    add_to_flush_list({obj.flush_key(): [_function_cache_key(key)]})
     return cached(f, key, timeout)
 
 
