@@ -137,7 +137,7 @@ class CachingTestCase(ExtraAppTestCase):
     def test_jinja_cache_tag_queryset(self):
         env = jinja2.Environment(extensions=['caching.ext.cache'])
         def check(q, expected):
-            list(q) # Get the queryset in cache.
+            list(q)  # Get the queryset in cache.
             t = env.from_string(
                 "{% cache q %}{% for x in q %}{{ x.id }}:{{ x.val }};"
                 "{% endfor %}{% endcache %}")
@@ -249,3 +249,60 @@ class CachingTestCase(ExtraAppTestCase):
 
         # Make sure we're updating the wrapper's docstring.
         eq_(b.calls.__doc__, Addon.calls.__doc__)
+
+    @mock.patch('caching.base.CacheMachine')
+    def test_no_cache_from_manager(self, CacheMachine):
+        a = Addon.objects.no_cache().get(id=1)
+        eq_(a.id, 1)
+        assert not hasattr(a, 'from_cache')
+        assert not CacheMachine.called
+
+    @mock.patch('caching.base.CacheMachine')
+    def test_no_cache_from_queryset(self, CacheMachine):
+        a = Addon.objects.all().no_cache().get(id=1)
+        eq_(a.id, 1)
+        assert not hasattr(a, 'from_cache')
+        assert not CacheMachine.called
+
+    def test_timeout_from_manager(self):
+        q = Addon.objects.cache(12).filter(id=1)
+        eq_(q.timeout, 12)
+        a = q.get()
+        assert hasattr(a, 'from_cache')
+        eq_(a.id, 1)
+
+    def test_timeout_from_queryset(self):
+        q = Addon.objects.all().cache(12).filter(id=1)
+        eq_(q.timeout, 12)
+        a = q.get()
+        assert hasattr(a, 'from_cache')
+        eq_(a.id, 1)
+
+    def test_cache_and_no_cache(self):
+        """Whatever happens last sticks."""
+        q = Addon.objects.no_cache().cache(12).filter(id=1)
+        eq_(q.timeout, 12)
+
+        no_cache = q.no_cache()
+
+        # The querysets don't share anything.
+        eq_(q.timeout, 12)
+        assert no_cache.timeout != 12
+
+        assert not hasattr(no_cache.get(), 'from_cache')
+
+        eq_(q.get().id, 1)
+        assert hasattr(q.get(), 'from_cache')
+
+    @mock.patch('caching.base.cache')
+    def test_cache_machine_timeout(self, cache):
+        cache.scheme = 'memcached'
+        cache.get.return_value = None
+        cache.get_many.return_value = {}
+
+        a = Addon.objects.cache(12).get(id=1)
+        eq_(a.id, 1)
+
+        assert cache.add.called
+        args, kwargs = cache.add.call_args
+        eq_(kwargs, {'timeout': 12})
