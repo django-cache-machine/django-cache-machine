@@ -292,7 +292,13 @@ def cached(function, key_, duration=None):
 
 def cached_with(obj, f, f_key, timeout=None):
     """Helper for caching a function call within an object's flush list."""
-    obj_key = obj.query_key() if hasattr(obj, 'query_key') else obj.cache_key
+    try:
+        obj_key = (obj.query_key() if hasattr(obj, 'query_key')
+                   else obj.cache_key)
+    except AttributeError:
+        log.warning(u'%r cannot be cached.' % obj)
+        return f()
+
     key = '%s:%s' % (f_key, obj_key)
     # Put the key generated in cached() into this object's flush list.
     add_to_flush_list({obj.flush_key(): [_function_cache_key(key)]})

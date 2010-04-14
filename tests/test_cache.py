@@ -229,6 +229,15 @@ class CachingTestCase(ExtraAppTestCase):
         eq_(f(), 2)
         eq_(f(), 2)
 
+    def test_cached_with_bad_object(self):
+        """cached_with shouldn't fail if the object is missing a cache key."""
+        counter = mock.Mock()
+        def f():
+            counter()
+            return counter.call_count
+
+        eq_(caching.cached_with([], f, 'key'), 1)
+
     def test_cached_method(self):
         a = Addon.objects.get(id=1)
         eq_(a.calls(), (1, 1))
