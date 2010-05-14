@@ -268,7 +268,7 @@ def make_key(k):
     # memcached keys must be < 250 bytes and w/o whitespace, but it's nice
     # to see the keys when using locmem.
     if 'memcached' in cache.scheme:
-        return hashlib.md5(key).hexdigest()
+        return hashlib.md5(encoding.smart_str(key)).hexdigest()
     else:
         return key
 

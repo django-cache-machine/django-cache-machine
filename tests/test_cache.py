@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from django.conf import settings
 from django.core.cache import cache
 
@@ -315,3 +316,6 @@ class CachingTestCase(ExtraAppTestCase):
         assert cache.add.called
         args, kwargs = cache.add.call_args
         eq_(kwargs, {'timeout': 12})
+
+    def test_unicode_key(self):
+        list(User.objects.filter(name=u'ümlaüt'))
