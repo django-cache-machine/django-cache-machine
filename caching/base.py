@@ -23,8 +23,8 @@ log.addHandler(NullHandler())
 
 FOREVER = 0
 NO_CACHE = -1
-FLUSH = 'flush:'
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
+FLUSH = CACHE_PREFIX + ':flush:'
 
 scheme, _, _ = parse_backend_uri(settings.CACHE_BACKEND)
 cache.scheme = scheme
