@@ -175,8 +175,11 @@ class CachingQuerySet(models.query.QuerySet):
         if self.timeout == NO_CACHE:
             return iter(iterator())
         else:
-            # Work-around for Django #12717.
-            query_string = self.query_key()
+            try:
+                # Work-around for Django #12717.
+                query_string = self.query_key()
+            except query.EmptyResultSet:
+                return iterator()
             return iter(CacheMachine(query_string, iterator, self.timeout))
 
     def count(self):

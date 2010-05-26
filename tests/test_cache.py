@@ -319,3 +319,7 @@ class CachingTestCase(ExtraAppTestCase):
 
     def test_unicode_key(self):
         list(User.objects.filter(name=u'ümlaüt'))
+
+    def test_empty_in(self):
+        # Raised an exception before fixing #2.
+        eq_([], list(User.objects.filter(pk__in=[])))
