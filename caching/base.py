@@ -8,7 +8,7 @@ from django.core.cache import cache, parse_backend_uri
 from django.db import models
 from django.db.models import signals
 from django.db.models.sql import query
-from django.utils import translation, encoding
+from django.utils import encoding
 
 
 class NullHandler(logging.Handler):
@@ -265,9 +265,8 @@ def add_to_flush_list(mapping):
 
 
 def make_key(k):
-    """Generate the full key for ``k``, with a prefix and locale."""
-    lang = translation.get_language()
-    key = '%s:%s:%s' % (CACHE_PREFIX, lang, k)
+    """Generate the full key for ``k``, with a prefix."""
+    key = '%s:%s' % (CACHE_PREFIX, k)
     # memcached keys must be < 250 bytes and w/o whitespace, but it's nice
     # to see the keys when using locmem.
     if 'memcached' in cache.scheme:
