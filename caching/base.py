@@ -55,6 +55,8 @@ class CachingManager(models.Manager):
 
     def invalidate_keys(self, keys):
         """Invalidate all the flush lists named by the list of ``keys``."""
+        if not keys:
+            return
         keys = set(map(flush_key, keys))
 
         # Add other flush keys from the lists, which happens when a parent
@@ -67,9 +69,10 @@ class CachingManager(models.Manager):
         for flush_list in cache.get_many(set(keys)).values():
             if flush_list is not None:
                 flush.update(flush_list)
+        if flush:
+            log.debug('flushing %s' % flush)
+            cache.set_many(dict((k, None) for k in flush), 5)
         log.debug('invalidating %s' % keys)
-        log.debug('flushing %s' % flush)
-        cache.set_many(dict((k, None) for k in flush), 5)
         cache.delete_many(keys)
 
     def raw(self, raw_query, params=None, *args, **kwargs):
