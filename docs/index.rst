@@ -68,7 +68,7 @@ Here's what a minimal cached model looks like::
         objects = caching.base.CachingManager()
 
 Whenever you run a query, ``CachingQuerySet`` will try to find that query in
-the cache.  Queries are keyed by ``{locale}:{sql}``. If it's there, we return
+the cache.  Queries are keyed by ``{prefix}:{sql}``. If it's there, we return
 the cached result set and everyone is happy.  If the query isn't in the cache,
 the normal codepath to run a database query is executed.  As the objects in the
 result set are iterated over, they are added to a list that will get cached

@@ -8,7 +8,7 @@ from django.core.cache import cache, parse_backend_uri
 from django.db import models
 from django.db.models import signals
 from django.db.models.sql import query
-from django.utils import translation, encoding
+from django.utils import encoding
 
 
 class NullHandler(logging.Handler):
@@ -55,6 +55,8 @@ class CachingManager(models.Manager):
 
     def invalidate_keys(self, keys):
         """Invalidate all the flush lists named by the list of ``keys``."""
+        if not keys:
+            return
         keys = set(map(flush_key, keys))
 
         # Add other flush keys from the lists, which happens when a parent
@@ -67,9 +69,10 @@ class CachingManager(models.Manager):
         for flush_list in cache.get_many(set(keys)).values():
             if flush_list is not None:
                 flush.update(flush_list)
+        if flush:
+            log.debug('flushing %s' % flush)
+            cache.set_many(dict((k, None) for k in flush), 5)
         log.debug('invalidating %s' % keys)
-        log.debug('flushing %s' % flush)
-        cache.set_many(dict((k, None) for k in flush), 5)
         cache.delete_many(keys)
 
     def raw(self, raw_query, params=None, *args, **kwargs):
@@ -265,9 +268,8 @@ def add_to_flush_list(mapping):
 
 
 def make_key(k):
-    """Generate the full key for ``k``, with a prefix and locale."""
-    lang = translation.get_language()
-    key = '%s:%s:%s' % (CACHE_PREFIX, lang, k)
+    """Generate the full key for ``k``, with a prefix."""
+    key = '%s:%s' % (CACHE_PREFIX, k)
     # memcached keys must be < 250 bytes and w/o whitespace, but it's nice
     # to see the keys when using locmem.
     if 'memcached' in cache.scheme:
