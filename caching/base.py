@@ -8,7 +8,7 @@ from django.core.cache import cache, parse_backend_uri
 from django.db import models
 from django.db.models import signals
 from django.db.models.sql import query
-from django.utils import encoding
+from django.utils import encoding, translation
 
 
 class NullHandler(logging.Handler):
@@ -101,7 +101,7 @@ class CacheMachine(object):
 
     def query_key(self):
         """Generate the cache key for this query."""
-        return make_key('qs:%s' % self.query_string)
+        return make_key('qs:%s' % self.query_string, with_locale=False)
 
     def __iter__(self):
         try:
@@ -252,7 +252,7 @@ class CachingRawQuerySet(models.query.RawQuerySet):
 def flush_key(obj):
     """We put flush lists in the flush: namespace."""
     key = obj if isinstance(obj, basestring) else obj.cache_key
-    return FLUSH + make_key(key)
+    return FLUSH + make_key(key, with_locale=False)
 
 
 def add_to_flush_list(mapping):
@@ -267,9 +267,11 @@ def add_to_flush_list(mapping):
     cache.set_many(flush_lists)
 
 
-def make_key(k):
+def make_key(k, with_locale=True):
     """Generate the full key for ``k``, with a prefix."""
     key = '%s:%s' % (CACHE_PREFIX, k)
+    if with_locale:
+        key += translation.get_language()
     # memcached keys must be < 250 bytes and w/o whitespace, but it's nice
     # to see the keys when using locmem.
     if 'memcached' in cache.scheme:
@@ -279,7 +281,7 @@ def make_key(k):
 
 
 def _function_cache_key(key):
-    return make_key('f:%s' % key)
+    return make_key('f:%s' % key, with_locale=True)
 
 
 def cached(function, key_, duration=None):

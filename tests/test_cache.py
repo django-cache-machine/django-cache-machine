@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.conf import settings
 from django.core.cache import cache
+from django.utils import translation
 
 import jinja2
 import mock
@@ -50,6 +51,32 @@ class CachingTestCase(ExtraAppTestCase):
         assert a.from_cache is True
 
         a.save()
+        assert Addon.objects.get(id=1).from_cache is False
+        a = [x for x in Addon.objects.all() if x.id == 1][0]
+        assert a.from_cache is False
+
+    def test_invalidation_cross_locale(self):
+        assert Addon.objects.get(id=1).from_cache is False
+        a = [x for x in Addon.objects.all() if x.id == 1][0]
+        assert a.from_cache is False
+
+        assert Addon.objects.get(id=1).from_cache is True
+        a = [x for x in Addon.objects.all() if x.id == 1][0]
+        assert a.from_cache is True
+
+        # Do query & invalidation in a different locale.
+        old_locale = translation.get_language()
+        translation.activate('fr')
+        assert Addon.objects.get(id=1).from_cache is True
+        a = [x for x in Addon.objects.all() if x.id == 1][0]
+        assert a.from_cache is True
+
+        a.save()
+        assert Addon.objects.get(id=1).from_cache is False
+        a = [x for x in Addon.objects.all() if x.id == 1][0]
+        assert a.from_cache is False
+
+        translation.activate(old_locale)
         assert Addon.objects.get(id=1).from_cache is False
         a = [x for x in Addon.objects.all() if x.id == 1][0]
         assert a.from_cache is False
@@ -213,9 +240,17 @@ class CachingTestCase(ExtraAppTestCase):
         eq_(f(), 1)
         eq_(f(), 1)
 
+        # Switching locales does not reuse the cache.
+        old_locale = translation.get_language()
+        translation.activate('fr')
+        eq_(f(), 2)
+
         # Called again after flush.
         a.save()
-        eq_(f(), 2)
+        eq_(f(), 3)
+
+        translation.activate(old_locale)
+        eq_(f(), 4)
 
         counter.reset_mock()
         q = Addon.objects.filter(id=1)
