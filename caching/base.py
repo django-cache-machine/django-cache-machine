@@ -24,6 +24,7 @@ log.addHandler(NullHandler())
 FOREVER = 0
 NO_CACHE = -1
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
+FETCH_BY_ID = getattr(settings, 'FETCH_BY_ID', False)
 FLUSH = CACHE_PREFIX + ':flush:'
 
 scheme, _, _ = parse_backend_uri(settings.CACHE_BACKEND)
@@ -158,6 +159,8 @@ class CacheMachine(object):
             for key in map(flush_key, obj._cache_keys()):
                 if key != obj_flush:
                     flush_lists[key].append(obj_flush)
+                if FETCH_BY_ID:
+                    flush_lists[key].append(byid(obj))
         add_to_flush_list(flush_lists)
 
 
@@ -184,7 +187,42 @@ class CachingQuerySet(models.query.QuerySet):
                 query_string = self.query_key()
             except query.EmptyResultSet:
                 return iterator()
+            if FETCH_BY_ID:
+                iterator = self.fetch_by_id
             return iter(CacheMachine(query_string, iterator, self.timeout))
+
+    def fetch_by_id(self):
+        """
+        Run two queries to get objects: one for the ids, one for id__in=ids.
+
+        After getting ids from the first query we can try cache.get_many to
+        reuse objects we've already seen.  Then we fetch the remaining items
+        from the db, and put those in the cache.  This prevents cache
+        duplication.
+        """
+        # Include columns from extra since they could be used in the query's
+        # order_by.
+        vals = self.values_list('pk', *self.query.extra.keys())
+        pks = [val[0] for val in vals]
+        keys = dict((byid(self.model._cache_key(pk)), pk) for pk in pks)
+        cached = dict((k, v) for k, v in cache.get_many(keys).items()
+                      if v is not None)
+
+        missed = [pk for key, pk in keys.items() if key not in cached]
+        others = self.model.objects.filter(pk__in=missed)
+        if hasattr(others, 'no_cache'):
+            others = others.no_cache()
+        if self.query.select_related:
+            others.dup_select_related(self)
+
+        # Put the fetched objects back in cache.
+        new = dict((byid(o), o) for o in others)
+        cache.set_many(new)
+
+        # Use pks to return the objects in the correct order.
+        objects = dict((o.pk, o) for o in cached.values() + new.values())
+        for pk in pks:
+            yield objects[pk]
 
     def count(self):
         timeout = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
@@ -254,6 +292,11 @@ def flush_key(obj):
     """We put flush lists in the flush: namespace."""
     key = obj if isinstance(obj, basestring) else obj.cache_key
     return FLUSH + make_key(key, with_locale=False)
+
+
+def byid(obj):
+    key = obj if isinstance(obj, basestring) else obj._cache_key(obj.pk)
+    return make_key('byid:' + key)
 
 
 def add_to_flush_list(mapping):
