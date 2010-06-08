@@ -129,7 +129,8 @@ class CacheMachine(object):
                 to_cache.append(obj)
                 yield obj
         except StopIteration:
-            self.cache_objects(to_cache)
+            if to_cache:
+                self.cache_objects(to_cache)
             raise
 
     def cache_objects(self, objects):
