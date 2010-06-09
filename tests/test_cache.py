@@ -358,3 +358,16 @@ class CachingTestCase(ExtraAppTestCase):
     def test_empty_in(self):
         # Raised an exception before fixing #2.
         eq_([], list(User.objects.filter(pk__in=[])))
+
+    def test_invalidate_empty_queryset(self):
+        u = User.objects.create()
+        eq_(list(u.addon_set.all()), [])
+        Addon.objects.create(val=42, author1=u, author2=u)
+        eq_([a.val for a in u.addon_set.all()], [42])
+
+    def test_invalidate_new_object(self):
+        u = User.objects.create()
+        Addon.objects.create(val=42, author1=u, author2=u)
+        eq_([a.val for a in u.addon_set.all()], [42])
+        Addon.objects.create(val=17, author1=u, author2=u)
+        eq_([a.val for a in u.addon_set.all()], [42, 17])
