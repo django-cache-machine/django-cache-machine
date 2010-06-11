@@ -26,3 +26,15 @@ Get it from `pypi <http://pypi.python.org/pypi/django-cache-machine>`_::
 or `github <http://github.com/jbalogh/django-cache-machine>`_::
 
     pip install -e git://github.com/jbalogh/django-cache-machine.git#egg=django-cache-machine
+
+
+Running Tests
+-------------
+
+
+Get it from `github <http://github.com/jbalogh/django-cache-machine>`_::
+
+    git clone git://github.com/jbalogh/django-cache-machine.git
+    cd django-cache-machine
+    pip install -r requirements.txt
+    fab test
