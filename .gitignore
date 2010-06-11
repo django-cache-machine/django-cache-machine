@@ -1,2 +1,2 @@
 docs/_build
-.py[co]
+*.py[co]
