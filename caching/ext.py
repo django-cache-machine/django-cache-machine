@@ -47,10 +47,16 @@ class FragmentCacheExtension(Extension):
 
         body = parser.parse_statements(['name:endcache'], drop_needle=True)
 
+        self.process_cache_arguments(args)
+
         # now return a `CallBlock` node that calls our _cache_support
         # helper method on this extension.
         return nodes.CallBlock(self.call_method('_cache_support', args),
                                [], [], body).set_lineno(lineno)
+
+    def process_cache_arguments(self, args):
+        """Extension point for adding anything extra to the cache_support."""
+        pass
 
     def _cache_support(self, name, obj, timeout, caller):
         """Cache helper callback."""
