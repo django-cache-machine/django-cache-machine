@@ -13,7 +13,6 @@ from fabric.contrib.project import rsync_project
 NAME = os.path.basename(os.path.dirname(__file__))
 ROOT = os.path.abspath(os.path.dirname(__file__))
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'cache-machine.settings'
 os.environ['PYTHONPATH'] = os.pathsep.join([ROOT,
                                             os.path.join(ROOT, 'examples')])
 
@@ -28,7 +27,10 @@ def doc(kind='html'):
 
 
 def test():
-    local('django-admin.py test -s')
+    for settings in ('locmem_settings', 'settings', 'redis_settings'):
+        print settings
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'cache-machine.%s' % settings
+        local('django-admin.py test')
 
 
 def updoc():

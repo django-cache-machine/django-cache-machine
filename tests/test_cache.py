@@ -9,6 +9,7 @@ from nose.tools import eq_
 
 from test_utils import ExtraAppTestCase
 import caching.base as caching
+from caching import invalidation
 
 from testapp.models import Addon, User
 
@@ -20,6 +21,8 @@ class CachingTestCase(ExtraAppTestCase):
     def setUp(self):
         cache.clear()
         self.old_timeout = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
+        if getattr(settings, 'CACHE_MACHINE_USE_REDIS', False):
+            invalidation.redis.flushall()
 
     def tearDown(self):
         settings.CACHE_COUNT_TIMEOUT = self.old_timeout
@@ -155,36 +158,29 @@ class CachingTestCase(ExtraAppTestCase):
     def test_queryset_flush_list(self):
         """Check that we're making a flush list for the queryset."""
         q = Addon.objects.all()
-        assert cache.get(q.flush_key()) is None
         objects = list(q)  # Evaluate the queryset so it gets cached.
+        caching.invalidator.add_to_flush_list({q.flush_key(): ['remove-me']})
+        cache.set('remove-me', 15)
 
-        query_key = cache.get(q.flush_key())
-        assert query_key is not None
-        eq_(list(cache.get(query_key.pop())), objects)
+        Addon.objects.invalidate(objects[0])
+        assert cache.get(q.flush_key()) is None
+        assert cache.get('remove-me') is None
 
     def test_jinja_cache_tag_queryset(self):
         env = jinja2.Environment(extensions=['caching.ext.cache'])
         def check(q, expected):
-            list(q)  # Get the queryset in cache.
             t = env.from_string(
                 "{% cache q %}{% for x in q %}{{ x.id }}:{{ x.val }};"
                 "{% endfor %}{% endcache %}")
-            s = t.render(q=q)
+            eq_(t.render(q=q), expected)
 
-            eq_(s, expected)
-
-            # Check the flush keys, find the key for the template.
-            flush = cache.get(q.flush_key())
-            eq_(len(flush), 2)
-
-            # Check the cached fragment.  The key happens to be the first one,
-            # according to however set arranges them.
-            key = list(flush)[0]
-            cached = cache.get(key)
-            eq_(s, cached)
-
+        # Get the template in cache, then hijack iterator to make sure we're
+        # hitting the cached fragment.
         check(Addon.objects.all(), '1:42;2:42;')
-        check(Addon.objects.all(), '1:42;2:42;')
+        qs = Addon.objects.all()
+        qs.iterator = mock.Mock()
+        check(qs, '1:42;2:42;')
+        assert not qs.iterator.called
 
         # Make changes, make sure we dropped the cached fragment.
         a = Addon.objects.get(id=1)
@@ -196,7 +192,9 @@ class CachingTestCase(ExtraAppTestCase):
         assert cache.get(q.flush_key()) is None
 
         check(Addon.objects.all(), '1:17;2:42;')
-        check(Addon.objects.all(), '1:17;2:42;')
+        qs = Addon.objects.all()
+        qs.iterator = mock.Mock()
+        check(qs, '1:17;2:42;')
 
     def test_jinja_cache_tag_object(self):
         env = jinja2.Environment(extensions=['caching.ext.cache'])
