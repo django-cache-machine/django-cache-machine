@@ -1,13 +1,22 @@
 import collections
+import functools
 import hashlib
+import logging
 
 from django.conf import settings
 from django.core.cache import cache, parse_backend_uri
 from django.utils import encoding, translation
 
+try:
+    import redis as redislib
+except ImportError:
+    redislib = None
+
 
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 FLUSH = CACHE_PREFIX + ':flush:'
+
+log = logging.getLogger('caching.invalidation')
 
 
 def make_key(k, with_locale=True):
@@ -27,6 +36,28 @@ def flush_key(obj):
     """We put flush lists in the flush: namespace."""
     key = obj if isinstance(obj, basestring) else obj.cache_key
     return FLUSH + make_key(key, with_locale=False)
+
+
+def safe_redis(return_type):
+    """
+    Decorator to catch and log any redis errors.
+
+    return_type (optionally a callable) will be returned if there is an error.
+    """
+    def decorator(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kw):
+            try:
+                return f(*args, **kw)
+            except redislib.RedisError, e:
+                log.error('redis error: %s' % e)
+                if hasattr(return_type, '__call__'):
+                    return return_type()
+                else:
+                    return return_type
+        return wrapper
+    return decorator
+
 
 
 class Invalidator(object):
@@ -106,6 +137,7 @@ class Invalidator(object):
 
 class RedisInvalidator(Invalidator):
 
+    @safe_redis(None)
     def add_to_flush_list(self, mapping):
         """Update flush lists with the {flush_key: [query_key,...]} map."""
         pipe = redis.pipeline(transaction=False)
@@ -114,9 +146,11 @@ class RedisInvalidator(Invalidator):
                 pipe.sadd(key, query_key)
         pipe.execute()
 
+    @safe_redis(set)
     def get_flush_lists(self, keys):
         return redis.sunion(keys)
 
+    @safe_redis(None)
     def clear_flush_lists(self, keys):
         redis.delete(*keys)
 
@@ -124,7 +158,6 @@ class RedisInvalidator(Invalidator):
 def get_redis_backend():
     """Connect to redis from a string like CACHE_BACKEND."""
     # From django-redis-cache.
-    import redis
     _, server, params = parse_backend_uri(settings.REDIS_BACKEND)
     db = params.get('db', 1)
     try:
@@ -141,7 +174,7 @@ def get_redis_backend():
     else:
         host = 'localhost'
         port = 6379
-    return redis.Redis(host=host, port=port, db=db, password=password)
+    return redislib.Redis(host=host, port=port, db=db, password=password)
 
 
 if getattr(settings, 'CACHE_MACHINE_USE_REDIS', False):
