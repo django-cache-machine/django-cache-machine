@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.utils import encoding
 
 from jinja2 import nodes
 from jinja2.ext import Extension
@@ -40,10 +41,16 @@ class FragmentCacheExtension(Extension):
 
         # If there is a comma, the user provided a timeout.  If not, use
         # None as second parameter.
-        if parser.stream.skip_if('comma'):
-            args.append(parser.parse_expression())
-        else:
-            args.append(nodes.Const(None))
+        timeout = nodes.Const(None)
+        extra = nodes.Const([])
+        while parser.stream.skip_if('comma'):
+            x = parser.parse_expression()
+            if parser.stream.current.type == 'assign':
+                next(parser.stream)
+                extra = parser.parse_expression()
+            else:
+                timeout = x
+        args.extend([timeout, extra])
 
         body = parser.parse_statements(['name:endcache'], drop_needle=True)
 
@@ -58,12 +65,13 @@ class FragmentCacheExtension(Extension):
         """Extension point for adding anything extra to the cache_support."""
         pass
 
-    def _cache_support(self, name, obj, timeout, caller):
+    def _cache_support(self, name, obj, timeout, extra, caller):
         """Cache helper callback."""
         if settings.TEMPLATE_DEBUG:
             return caller()
-        return caching.base.cached_with(obj, caller, 'fragment:' + name,
-                                        timeout)
+        extra = ':'.join(map(encoding.smart_str, extra))
+        key = 'fragment:%s:%s' % (name, extra)
+        return caching.base.cached_with(obj, caller, key, timeout)
 
 
 # Nice import name.
