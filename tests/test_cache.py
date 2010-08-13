@@ -225,6 +225,29 @@ class CachingTestCase(ExtraAppTestCase):
         addon.save()
         check(addon, '1\n17')
 
+    def test_jinja_cache_tag_extra(self):
+        env = jinja2.Environment(extensions=['caching.ext.cache'])
+        addon = Addon.objects.get(id=1)
+
+        template = ('{% cache obj, extra=[obj.key] %}{{ obj.id }}:'
+                    '{{ obj.key }}{% endcache %}')
+
+        def check(obj, expected):
+            t = env.from_string(template)
+            eq_(t.render(obj=obj), expected)
+
+        addon.key = 1
+        check(addon, '1:1')
+        addon.key = 2
+        check(addon, '1:2')
+
+        template = ('{% cache obj, 10, extra=[obj.key] %}{{ obj.id }}:'
+                    '{{ obj.key }}{% endcache %}')
+        addon.key = 1
+        check(addon, '1:1')
+        addon.key = 2
+        check(addon, '1:2')
+
     def test_cached_with(self):
         counter = mock.Mock()
         def expensive():
