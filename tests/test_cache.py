@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.conf import settings
 from django.core.cache import cache
-from django.utils import translation
+from django.utils import translation, encoding
 
 import jinja2
 import mock
@@ -292,6 +292,14 @@ class CachingTestCase(ExtraAppTestCase):
             return counter.call_count
 
         eq_(caching.cached_with([], f, 'key'), 1)
+
+    def test_cached_with_unicode(self):
+        u = ':'.join(map(encoding.smart_str, [u'תיאור אוסף']))
+        obj = mock.Mock()
+        obj.query_key.return_value = u'xxx'
+        obj.flush_key.return_value = 'key'
+        f = lambda: 1
+        eq_(caching.cached_with(obj, f, 'adf:%s' % u), 1)
 
     def test_cached_method(self):
         a = Addon.objects.get(id=1)

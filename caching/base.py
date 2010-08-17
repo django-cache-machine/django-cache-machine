@@ -307,7 +307,7 @@ def cached_with(obj, f, f_key, timeout=None):
         log.warning(u'%r cannot be cached.' % obj)
         return f()
 
-    key = '%s:%s' % (f_key, obj_key)
+    key = '%s:%s' % tuple(map(encoding.smart_str, (f_key, obj_key)))
     # Put the key generated in cached() into this object's flush list.
     add_to_flush_list({obj.flush_key(): [_function_cache_key(key)]})
     return cached(f, key, timeout)
