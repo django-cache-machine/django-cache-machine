@@ -270,13 +270,13 @@ def add_to_flush_list(mapping):
 
 def make_key(k, with_locale=True):
     """Generate the full key for ``k``, with a prefix."""
-    key = '%s:%s' % (CACHE_PREFIX, k)
+    key = encoding.smart_str('%s:%s' % (CACHE_PREFIX, k))
     if with_locale:
-        key += translation.get_language()
+        key += encoding.smart_str(translation.get_language())
     # memcached keys must be < 250 bytes and w/o whitespace, but it's nice
     # to see the keys when using locmem.
     if 'memcached' in cache.scheme:
-        return hashlib.md5(encoding.smart_str(key)).hexdigest()
+        return hashlib.md5(key).hexdigest()
     else:
         return key
 
