@@ -151,7 +151,7 @@ class CachingQuerySet(models.query.QuerySet):
         if timeout is None:
             return super_count()
         else:
-            return cached(super_count, query_string, timeout)
+            return cached_with(self, super_count, query_string, timeout)
 
     def cache(self, timeout=None):
         qs = self._clone()
