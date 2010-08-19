@@ -407,3 +407,9 @@ class CachingTestCase(ExtraAppTestCase):
         # This would crash with a unicode error.
         caching.make_key(f, with_locale=True)
         translation.deactivate()
+
+    @mock.patch('caching.invalidation.cache.get_many')
+    def test_get_flush_lists_none(self, cache_mock):
+        if not getattr(settings, 'CACHE_MACHINE_USE_REDIS', False):
+            cache_mock.return_value.values.return_value = [None, [1]]
+            eq_(caching.invalidator.get_flush_lists(None), set([1]))

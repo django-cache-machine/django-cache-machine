@@ -127,8 +127,9 @@ class Invalidator(object):
 
     def get_flush_lists(self, keys):
         """Return a set of object keys from the lists in `keys`."""
-        return set(e for flush_list in cache.get_many(keys).values()
-                     for e in flush_list)
+        return set(e for flush_list in
+                   filter(None, cache.get_many(keys).values())
+                   for e in flush_list)
 
     def clear_flush_lists(self, keys):
         """Remove the given keys from the database."""
