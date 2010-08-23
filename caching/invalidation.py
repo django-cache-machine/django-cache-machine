@@ -166,12 +166,16 @@ def get_redis_backend():
     """Connect to redis from a string like CACHE_BACKEND."""
     # From django-redis-cache.
     _, server, params = parse_backend_uri(settings.REDIS_BACKEND)
-    db = params.get('db', 1)
+    db = params.pop('db', 1)
     try:
         db = int(db)
     except (ValueError, TypeError):
         db = 1
-    password = params.get('password', None)
+    try:
+        socket_timeout = float(params.pop('socket_timeout'))
+    except (KeyError, ValueError):
+        socket_timeout = None
+    password = params.pop('password', None)
     if ':' in server:
         host, port = server.split(':')
         try:
@@ -181,7 +185,8 @@ def get_redis_backend():
     else:
         host = 'localhost'
         port = 6379
-    return redislib.Redis(host=host, port=port, db=db, password=password)
+    return redislib.Redis(host=host, port=port, db=db, password=password,
+                          socket_timeout=socket_timeout)
 
 
 if getattr(settings, 'CACHE_MACHINE_NO_INVALIDATION', False):
