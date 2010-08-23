@@ -2,6 +2,7 @@ import collections
 import functools
 import hashlib
 import logging
+import socket
 
 from django.conf import settings
 from django.core.cache import cache, parse_backend_uri
@@ -49,7 +50,7 @@ def safe_redis(return_type):
         def wrapper(*args, **kw):
             try:
                 return f(*args, **kw)
-            except redislib.RedisError, e:
+            except (socket.error, redislib.RedisError), e:
                 log.error('redis error: %s' % e)
                 if hasattr(return_type, '__call__'):
                     return return_type()
