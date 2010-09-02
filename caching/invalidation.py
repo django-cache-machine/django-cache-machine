@@ -139,22 +139,28 @@ class Invalidator(object):
 
 class RedisInvalidator(Invalidator):
 
+    def safe_key(self, key):
+        if ' ' in key or '\n' in key:
+            log.warning('BAD KEY: "%s"' % key)
+            return ''
+        return key
+
     @safe_redis(None)
     def add_to_flush_list(self, mapping):
         """Update flush lists with the {flush_key: [query_key,...]} map."""
         pipe = redis.pipeline(transaction=False)
         for key, list_ in mapping.items():
             for query_key in list_:
-                pipe.sadd(key, query_key)
+                pipe.sadd(self.safe_key(key), query_key)
         pipe.execute()
 
     @safe_redis(set)
     def get_flush_lists(self, keys):
-        return redis.sunion(keys)
+        return redis.sunion(map(self.safe_key, keys))
 
     @safe_redis(None)
     def clear_flush_lists(self, keys):
-        redis.delete(*keys)
+        redis.delete(*map(self.safe_key, keys))
 
 
 class NullInvalidator(Invalidator):
