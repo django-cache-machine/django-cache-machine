@@ -26,8 +26,11 @@ def doc(kind='html'):
         local('make clean %s' % kind)
 
 
+SETTINGS = ('locmem_settings', 'settings', 'memcache_byid',
+            'redis_settings', 'redis_byid')
+
 def test():
-    for settings in ('locmem_settings', 'settings', 'redis_settings'):
+    for settings in SETTINGS:
         print settings
         os.environ['DJANGO_SETTINGS_MODULE'] = 'cache-machine.%s' % settings
         local('django-admin.py test')

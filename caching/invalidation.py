@@ -98,7 +98,7 @@ class Invalidator(object):
                 if key != obj_flush:
                     flush_lists[key].add(obj_flush)
                 if FETCH_BY_ID:
-                    flush_lists[key].append(byid(obj))
+                    flush_lists[key].add(byid(obj))
         self.add_to_flush_list(flush_lists)
 
     def find_flush_lists(self, keys):
