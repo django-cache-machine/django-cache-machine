@@ -166,7 +166,8 @@ class CachingQuerySet(models.query.QuerySet):
 
         missed = [pk for key, pk in keys.items() if key not in cached]
         # Clear out the default ordering since we order based on the query.
-        others = self.model.objects.filter(pk__in=missed).order_by()
+        others = (self.model.objects.filter(pk__in=missed).order_by()
+                  .using(self.db))
         if hasattr(others, 'no_cache'):
             others = others.no_cache()
         if self.query.select_related:
