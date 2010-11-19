@@ -28,10 +28,7 @@ def make_key(k, with_locale=True):
         key += encoding.smart_str(translation.get_language())
     # memcached keys must be < 250 bytes and w/o whitespace, but it's nice
     # to see the keys when using locmem.
-    if 'memcached' in cache.scheme:
-        return hashlib.md5(key).hexdigest()
-    else:
-        return key
+    return hashlib.md5(key).hexdigest()
 
 
 def flush_key(obj):
