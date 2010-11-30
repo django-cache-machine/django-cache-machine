@@ -44,6 +44,14 @@ class CachingTestCase(ExtraAppTestCase):
         assert Addon.objects.get(id=1).from_cache is False
         assert Addon.objects.get(id=1).from_cache is True
 
+    def test_filter_cache(self):
+        assert Addon.objects.filter(id=1)[0].from_cache is False
+        assert Addon.objects.filter(id=1)[0].from_cache is True
+
+    def test_slice_cache(self):
+        assert Addon.objects.filter(id=1)[:1][0].from_cache is False
+        assert Addon.objects.filter(id=1)[:1][0].from_cache is True
+
     def test_invalidation(self):
         assert Addon.objects.get(id=1).from_cache is False
         a = [x for x in Addon.objects.all() if x.id == 1][0]
