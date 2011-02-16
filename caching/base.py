@@ -166,19 +166,22 @@ class CachingQuerySet(models.query.QuerySet):
 
         # Pick up the objects we missed.
         missed = [pk for key, pk in keys.items() if key not in cached]
-        # Reuse self but clear limits in case there was a slice.
-        others = self.all()
-        others.query.clear_limits()
-        # Clear out the default ordering since we order based on the query.
-        others = others.order_by().filter(pk__in=missed)
-        if hasattr(others, 'no_cache'):
-            others = others.no_cache()
-        if self.query.select_related:
-            others.dup_select_related(self)
+        if missed:
+            # Reuse the queryset but get a clean query.
+            others = self.all()
+            others.query.clear_limits()
+            # Clear out the default ordering since we order based on the query.
+            others = others.order_by().filter(pk__in=missed)
+            if hasattr(others, 'no_cache'):
+                others = others.no_cache()
+            if self.query.select_related:
+                others.dup_select_related(self)
 
-        # Put the fetched objects back in cache.
-        new = dict((byid(o), o) for o in others)
-        cache.set_many(new)
+            # Put the fetched objects back in cache.
+            new = dict((byid(o), o) for o in others)
+            cache.set_many(new)
+        else:
+            new = {}
 
         # Use pks to return the objects in the correct order.
         objects = dict((o.pk, o) for o in cached.values() + new.values())
