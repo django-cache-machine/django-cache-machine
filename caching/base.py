@@ -169,7 +169,7 @@ class CachingQuerySet(models.query.QuerySet):
         if missed:
             # Reuse the queryset but get a clean query.
             others = self.all()
-            others.query = query.Query(others.model)
+            others.query.clear_limits()
             # Clear out the default ordering since we order based on the query.
             others = others.order_by().filter(pk__in=missed)
             if hasattr(others, 'no_cache'):
