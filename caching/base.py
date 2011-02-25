@@ -25,6 +25,7 @@ FOREVER = 0
 NO_CACHE = -1
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 FLUSH = CACHE_PREFIX + ':flush:'
+CACHE_SET_TIMEOUT = getattr(settings, 'CACHE_SET_TIMEOUT', 1)
 
 scheme, _, _ = parse_backend_uri(settings.CACHE_BACKEND)
 cache.scheme = scheme
@@ -71,7 +72,7 @@ class CachingManager(models.Manager):
                 flush.update(flush_list)
         if flush:
             log.debug('flushing %s' % flush)
-            cache.set_many(dict((k, None) for k in flush), 5)
+            cache.set_many(dict((k, None) for k in flush), CACHE_SET_TIMEOUT)
         log.debug('invalidating %s' % keys)
         cache.delete_many(keys)
 
