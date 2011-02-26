@@ -26,9 +26,6 @@ NO_CACHE = -1
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 FETCH_BY_ID = getattr(settings, 'FETCH_BY_ID', False)
 
-scheme, _, _ = parse_backend_uri(settings.CACHE_BACKEND)
-cache.scheme = scheme
-
 
 class CachingManager(models.Manager):
 
