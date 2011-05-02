@@ -1,6 +1,4 @@
-import collections
 import functools
-import hashlib
 import logging
 
 from django.conf import settings
@@ -8,7 +6,9 @@ from django.core.cache import cache, parse_backend_uri
 from django.db import models
 from django.db.models import signals
 from django.db.models.sql import query
-from django.utils import encoding, translation
+from django.utils import encoding
+
+from .invalidation import invalidator, flush_key, make_key, byid
 
 
 class NullHandler(logging.Handler):
@@ -24,10 +24,7 @@ log.addHandler(NullHandler())
 FOREVER = 0
 NO_CACHE = -1
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
-FLUSH = CACHE_PREFIX + ':flush:'
-
-scheme, _, _ = parse_backend_uri(settings.CACHE_BACKEND)
-cache.scheme = scheme
+FETCH_BY_ID = getattr(settings, 'FETCH_BY_ID', False)
 
 
 class CachingManager(models.Manager):
@@ -51,29 +48,8 @@ class CachingManager(models.Manager):
 
     def invalidate(self, *objects):
         """Invalidate all the flush lists associated with ``objects``."""
-        self.invalidate_keys(k for o in objects for k in o._cache_keys())
-
-    def invalidate_keys(self, keys):
-        """Invalidate all the flush lists named by the list of ``keys``."""
-        if not keys:
-            return
-        keys = set(map(flush_key, keys))
-
-        # Add other flush keys from the lists, which happens when a parent
-        # object includes a foreign key.
-        for flush_list in cache.get_many(keys).values():
-            if flush_list is not None:
-                keys.update(k for k in flush_list if k.startswith(FLUSH))
-
-        flush = set()
-        for flush_list in cache.get_many(set(keys)).values():
-            if flush_list is not None:
-                flush.update(flush_list)
-        if flush:
-            log.debug('flushing %s' % flush)
-            cache.set_many(dict((k, None) for k in flush), 5)
-        log.debug('invalidating %s' % keys)
-        cache.delete_many(keys)
+        keys = [k for o in objects for k in o._cache_keys()]
+        invalidator.invalidate_keys(keys)
 
     def raw(self, raw_query, params=None, *args, **kwargs):
         return CachingRawQuerySet(raw_query, self.model, params=params,
@@ -135,30 +111,10 @@ class CacheMachine(object):
 
     def cache_objects(self, objects):
         """Cache query_key => objects, then update the flush lists."""
-        # Adding to the flush lists has a race condition: if simultaneous
-        # processes are adding to the same list, one of the query keys will be
-        # dropped.  Using redis would be safer.
         query_key = self.query_key()
-        cache.add(query_key, objects, timeout=self.timeout)
-
-        # Add this query to the flush list of each object.  We include
-        # query_flush so that other things can be cached against the queryset
-        # and still participate in invalidation.
-        flush_keys = [o.flush_key() for o in objects]
         query_flush = flush_key(self.query_string)
-
-        flush_lists = collections.defaultdict(list)
-        for key in flush_keys:
-            flush_lists[key].extend([query_key, query_flush])
-        flush_lists[query_flush].append(query_key)
-
-        # Add each object to the flush lists of its foreign keys.
-        for obj in objects:
-            obj_flush = obj.flush_key()
-            for key in map(flush_key, obj._cache_keys()):
-                if key != obj_flush:
-                    flush_lists[key].append(obj_flush)
-        add_to_flush_list(flush_lists)
+        cache.add(query_key, objects, timeout=self.timeout)
+        invalidator.cache_objects(objects, query_key, query_flush)
 
 
 class CachingQuerySet(models.query.QuerySet):
@@ -184,7 +140,53 @@ class CachingQuerySet(models.query.QuerySet):
                 query_string = self.query_key()
             except query.EmptyResultSet:
                 return iterator()
+            if FETCH_BY_ID:
+                iterator = self.fetch_by_id
             return iter(CacheMachine(query_string, iterator, self.timeout))
+
+    def fetch_by_id(self):
+        """
+        Run two queries to get objects: one for the ids, one for id__in=ids.
+
+        After getting ids from the first query we can try cache.get_many to
+        reuse objects we've already seen.  Then we fetch the remaining items
+        from the db, and put those in the cache.  This prevents cache
+        duplication.
+        """
+        # Include columns from extra since they could be used in the query's
+        # order_by.
+        vals = self.values_list('pk', *self.query.extra.keys())
+        pks = [val[0] for val in vals]
+        keys = dict((byid(self.model._cache_key(pk)), pk) for pk in pks)
+        cached = dict((k, v) for k, v in cache.get_many(keys).items()
+                      if v is not None)
+
+        # Pick up the objects we missed.
+        missed = [pk for key, pk in keys.items() if key not in cached]
+        if missed:
+            others = self.fetch_missed(missed)
+            # Put the fetched objects back in cache.
+            new = dict((byid(o), o) for o in others)
+            cache.set_many(new)
+        else:
+            new = {}
+
+        # Use pks to return the objects in the correct order.
+        objects = dict((o.pk, o) for o in cached.values() + new.values())
+        for pk in pks:
+            yield objects[pk]
+
+    def fetch_missed(self, pks):
+        # Reuse the queryset but get a clean query.
+        others = self.all()
+        others.query.clear_limits()
+        # Clear out the default ordering since we order based on the query.
+        others = others.order_by().filter(pk__in=pks)
+        if hasattr(others, 'no_cache'):
+            others = others.no_cache()
+        if self.query.select_related:
+            others.dup_select_related(self)
+        return others
 
     def count(self):
         timeout = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
@@ -193,7 +195,7 @@ class CachingQuerySet(models.query.QuerySet):
         if timeout is None:
             return super_count()
         else:
-            return cached(super_count, query_string, timeout)
+            return cached_with(self, super_count, query_string, timeout)
 
     def cache(self, timeout=None):
         qs = self._clone()
@@ -250,37 +252,6 @@ class CachingRawQuerySet(models.query.RawQuerySet):
         raise StopIteration
 
 
-def flush_key(obj):
-    """We put flush lists in the flush: namespace."""
-    key = obj if isinstance(obj, basestring) else obj.cache_key
-    return FLUSH + make_key(key, with_locale=False)
-
-
-def add_to_flush_list(mapping):
-    """Update flush lists with the {flush_key: [query_key,...]} map."""
-    flush_lists = collections.defaultdict(set)
-    flush_lists.update(cache.get_many(mapping.keys()))
-    for key, list_ in mapping.items():
-        if flush_lists[key] is None:
-            flush_lists[key] = set(list_)
-        else:
-            flush_lists[key].update(list_)
-    cache.set_many(flush_lists)
-
-
-def make_key(k, with_locale=True):
-    """Generate the full key for ``k``, with a prefix."""
-    key = encoding.smart_str('%s:%s' % (CACHE_PREFIX, k))
-    if with_locale:
-        key += encoding.smart_str(translation.get_language())
-    # memcached keys must be < 250 bytes and w/o whitespace, but it's nice
-    # to see the keys when using locmem.
-    if 'memcached' in cache.scheme:
-        return hashlib.md5(key).hexdigest()
-    else:
-        return key
-
-
 def _function_cache_key(key):
     return make_key('f:%s' % key, with_locale=True)
 
@@ -309,7 +280,8 @@ def cached_with(obj, f, f_key, timeout=None):
 
     key = '%s:%s' % tuple(map(encoding.smart_str, (f_key, obj_key)))
     # Put the key generated in cached() into this object's flush list.
-    add_to_flush_list({obj.flush_key(): [_function_cache_key(key)]})
+    invalidator.add_to_flush_list(
+        {obj.flush_key(): [_function_cache_key(key)]})
     return cached(f, key, timeout)
 
 

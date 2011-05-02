@@ -4,12 +4,12 @@ from django.core.cache.backends import locmem
 # Add infinite timeout support to the locmem backend.  Useful for testing.
 class CacheClass(locmem.CacheClass):
 
-    def add(self, key, value, timeout=None):
+    def add(self, key, value, timeout=None, version=None):
         if timeout == 0:
             timeout = Infinity
         return super(CacheClass, self).add(key, value, timeout)
 
-    def set(self, key, value, timeout=None):
+    def set(self, key, value, timeout=None, version=None):
         if timeout == 0:
             timeout = Infinity
         return super(CacheClass, self).set(key, value, timeout)

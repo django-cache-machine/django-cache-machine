@@ -1,4 +1,9 @@
-CACHE_BACKEND = 'caching.backends.memcached://localhost:11211'
+CACHES = {
+    'default': {
+        'BACKEND': 'caching.backends.memcached.CacheClass',
+        'LOCATION': 'localhost:11211',
+    },
+}
 
 TEST_RUNNER = 'django_nose.runner.NoseTestSuiteRunner'
 

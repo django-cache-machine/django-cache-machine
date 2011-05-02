@@ -9,6 +9,7 @@ from nose.tools import eq_
 
 from test_utils import ExtraAppTestCase
 import caching.base as caching
+from caching import invalidation
 
 from testapp.models import Addon, User
 
@@ -20,6 +21,8 @@ class CachingTestCase(ExtraAppTestCase):
     def setUp(self):
         cache.clear()
         self.old_timeout = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
+        if getattr(settings, 'CACHE_MACHINE_USE_REDIS', False):
+            invalidation.redis.flushall()
 
     def tearDown(self):
         settings.CACHE_COUNT_TIMEOUT = self.old_timeout
@@ -40,6 +43,14 @@ class CachingTestCase(ExtraAppTestCase):
         """Basic cache test: second get comes from cache."""
         assert Addon.objects.get(id=1).from_cache is False
         assert Addon.objects.get(id=1).from_cache is True
+
+    def test_filter_cache(self):
+        assert Addon.objects.filter(id=1)[0].from_cache is False
+        assert Addon.objects.filter(id=1)[0].from_cache is True
+
+    def test_slice_cache(self):
+        assert Addon.objects.filter(id=1)[:1][0].from_cache is False
+        assert Addon.objects.filter(id=1)[:1][0].from_cache is True
 
     def test_invalidation(self):
         assert Addon.objects.get(id=1).from_cache is False
@@ -155,32 +166,29 @@ class CachingTestCase(ExtraAppTestCase):
     def test_queryset_flush_list(self):
         """Check that we're making a flush list for the queryset."""
         q = Addon.objects.all()
-        assert cache.get(q.flush_key()) is None
         objects = list(q)  # Evaluate the queryset so it gets cached.
+        caching.invalidator.add_to_flush_list({q.flush_key(): ['remove-me']})
+        cache.set('remove-me', 15)
 
-        query_key = cache.get(q.flush_key())
-        assert query_key is not None
-        eq_(list(cache.get(query_key.pop())), objects)
+        Addon.objects.invalidate(objects[0])
+        assert cache.get(q.flush_key()) is None
+        assert cache.get('remove-me') is None
 
     def test_jinja_cache_tag_queryset(self):
         env = jinja2.Environment(extensions=['caching.ext.cache'])
         def check(q, expected):
-            list(q)  # Get the queryset in cache.
             t = env.from_string(
                 "{% cache q %}{% for x in q %}{{ x.id }}:{{ x.val }};"
                 "{% endfor %}{% endcache %}")
-            s = t.render(q=q)
+            eq_(t.render(q=q), expected)
 
-            eq_(s, expected)
-
-            # Check the flush keys, find the key for the template.
-            flush = cache.get(q.flush_key())
-            eq_(len(flush), 2)
-
-            assert s in [cache.get(key) for key in flush]
-
+        # Get the template in cache, then hijack iterator to make sure we're
+        # hitting the cached fragment.
         check(Addon.objects.all(), '1:42;2:42;')
-        check(Addon.objects.all(), '1:42;2:42;')
+        qs = Addon.objects.all()
+        qs.iterator = mock.Mock()
+        check(qs, '1:42;2:42;')
+        assert not qs.iterator.called
 
         # Make changes, make sure we dropped the cached fragment.
         a = Addon.objects.get(id=1)
@@ -192,7 +200,9 @@ class CachingTestCase(ExtraAppTestCase):
         assert cache.get(q.flush_key()) is None
 
         check(Addon.objects.all(), '1:17;2:42;')
-        check(Addon.objects.all(), '1:17;2:42;')
+        qs = Addon.objects.all()
+        qs.iterator = mock.Mock()
+        check(qs, '1:17;2:42;')
 
     def test_jinja_cache_tag_object(self):
         env = jinja2.Environment(extensions=['caching.ext.cache'])
@@ -402,6 +412,12 @@ class CachingTestCase(ExtraAppTestCase):
     def test_make_key_unicode(self):
         translation.activate(u'en-US')
         f = 'fragment\xe9\x9b\xbb\xe8\x85\xa6\xe7\x8e'
-        eq_(caching.make_key(f, with_locale=True),
-            'b83d174032efa27bf1c9ce1db19fa6ec')
+        # This would crash with a unicode error.
+        caching.make_key(f, with_locale=True)
         translation.deactivate()
+
+    @mock.patch('caching.invalidation.cache.get_many')
+    def test_get_flush_lists_none(self, cache_mock):
+        if not getattr(settings, 'CACHE_MACHINE_USE_REDIS', False):
+            cache_mock.return_value.values.return_value = [None, [1]]
+            eq_(caching.invalidator.get_flush_lists(None), set([1]))
