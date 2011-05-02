@@ -4,29 +4,26 @@ import hashlib
 import logging
 
 from django.conf import settings
-from django.core.cache import cache, parse_backend_uri
+from django.core.cache import cache, parse_backend_uri, parse_backend_conf
 from django.db import models
 from django.db.models import signals
 from django.db.models.sql import query
 from django.utils import encoding, translation
 
-
-class NullHandler(logging.Handler):
-
-    def emit(self, record):
-        pass
-
-
 log = logging.getLogger('caching')
-log.setLevel(logging.INFO)
-log.addHandler(NullHandler())
 
 FOREVER = 0
 NO_CACHE = -1
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 FLUSH = CACHE_PREFIX + ':flush:'
+CACHE_COUNT_TIMEOUT = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
 
-scheme, _, _ = parse_backend_uri(settings.CACHE_BACKEND)
+CACHE_BACKEND = getattr(settings, 'CACHE_BACKEND', '')
+if CACHE_BACKEND:
+    scheme, _, _ = parse_backend_uri(CACHE_BACKEND)
+else:
+    scheme, _, args = parse_backend_conf('default')
+    CACHE_COUNT_TIMEOUT = args.get('TIMEOUT', None)
 cache.scheme = scheme
 
 
@@ -139,6 +136,7 @@ class CacheMachine(object):
         # processes are adding to the same list, one of the query keys will be
         # dropped.  Using redis would be safer.
         query_key = self.query_key()
+        log.debug("add query_key %s" % query_key)
         cache.add(query_key, objects, timeout=self.timeout)
 
         # Add this query to the flush list of each object.  We include
@@ -187,7 +185,7 @@ class CachingQuerySet(models.query.QuerySet):
             return iter(CacheMachine(query_string, iterator, self.timeout))
 
     def count(self):
-        timeout = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
+        timeout = CACHE_COUNT_TIMEOUT
         super_count = super(CachingQuerySet, self).count
         query_string = 'count:%s' % self.query_key()
         if timeout is None:
