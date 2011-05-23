@@ -7,9 +7,14 @@ from django.db import models
 from django.db.models import signals
 from django.db.models.sql import query
 from django.utils import encoding
-from django.utils.log import NullHandler
 
 from .invalidation import invalidator, flush_key, make_key, byid
+
+
+class NullHandler(logging.Handler):
+
+    def emit(self, record):
+        pass
 
 
 log = logging.getLogger('caching')
