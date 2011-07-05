@@ -11,8 +11,7 @@ For full docs, see http://jbalogh.me/projects/cache-machine.
 Requirements
 ------------
 
-Cache Machine requires Django 1.2 (currently on trunk).  It was written and
-tested on Python 2.6.
+Cache Machine requires Django 1.3.  It was written and tested on Python 2.6.
 
 
 Installation
