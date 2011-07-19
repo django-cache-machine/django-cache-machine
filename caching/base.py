@@ -2,7 +2,7 @@ import functools
 import logging
 
 from django.conf import settings
-from django.core.cache import cache, parse_backend_uri
+from django.core.cache import cache
 from django.db import models
 from django.db.models import signals
 from django.db.models.sql import query
@@ -274,7 +274,7 @@ def cached_with(obj, f, f_key, timeout=None):
         obj_key = (obj.query_key() if hasattr(obj, 'query_key')
                    else obj.cache_key)
     except AttributeError:
-        log.warning(u'%r cannot be cached.' % obj)
+        log.warning(u'%r cannot be cached.' % encoding.smart_str(obj))
         return f()
 
     key = '%s:%s' % tuple(map(encoding.smart_str, (f_key, obj_key)))
