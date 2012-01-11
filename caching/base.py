@@ -191,7 +191,7 @@ class CachingQuerySet(models.query.QuerySet):
         timeout = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
         super_count = super(CachingQuerySet, self).count
         query_string = 'count:%s' % self.query_key()
-        if timeout is None:
+        if self.timeout == NO_CACHE or timeout is None:
             return super_count()
         else:
             return cached_with(self, super_count, query_string, timeout)
