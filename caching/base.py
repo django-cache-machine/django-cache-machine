@@ -24,6 +24,7 @@ FOREVER = 0
 NO_CACHE = -1
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 FETCH_BY_ID = getattr(settings, 'FETCH_BY_ID', False)
+CACHE_EMPTY_QUERYSETS = getattr(settings, 'CACHE_EMPTY_QUERYSETS', False)
 
 
 class CachingManager(models.Manager):
@@ -104,7 +105,7 @@ class CacheMachine(object):
                 to_cache.append(obj)
                 yield obj
         except StopIteration:
-            if to_cache:
+            if to_cache or CACHE_EMPTY_QUERYSETS:
                 self.cache_objects(to_cache)
             raise
 
