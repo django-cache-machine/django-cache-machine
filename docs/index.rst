@@ -36,6 +36,31 @@ If you want to set a prefix for all keys in Cache Machine, define
 
     CACHE_PREFIX = 'weee:'
 
+
+Django 1.3
+^^^^^^^^^^
+
+With Django 1.3 or higher, you should use the new ``CACHES`` setting::
+
+    CACHES = {
+        'default': {
+            'BACKEND': 'caching.backends.memcached.CacheClass',
+            'LOCATION': [
+                'server-1:11211',
+                'server-2:11211',
+            ],
+            'PREFIX': 'weee:',
+        },
+    }
+
+Note that we have to specify the class, not the module, for the ``BACKEND``
+property, and that the ``PREFIX`` is optional. The ``LOCATION`` may be a
+string, instead of a list, if you only have one server.
+
+
+COUNT queries
+^^^^^^^^^^^^^
+
 Calls to ``QuerySet.count()`` can be cached, but they cannot be reliably
 invalidated.  Cache Machine would have to do a full select to figure out the
 object keys, which is probably much more data than you want to pull.  I
