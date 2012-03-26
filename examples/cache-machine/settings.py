@@ -17,3 +17,5 @@ DATABASES = {
 INSTALLED_APPS = (
     'django_nose',
 )
+
+SECRET_KEY = 'ok'
