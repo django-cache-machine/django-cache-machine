@@ -26,8 +26,16 @@ def doc(kind='html'):
         local('make clean %s' % kind)
 
 
-SETTINGS = ('locmem_settings', 'settings', 'memcache_byid',
-            'redis_settings', 'redis_byid')
+SETTINGS = ('locmem_settings',
+            'settings',
+            'memcache_byid')
+
+try:
+    import redis
+    redis.Redis(host='localhost', port=6379).info()
+    SETTINGS += ('redis_settings', 'redis_byid')
+except Exception:
+    print 'WARNING: Skipping redis tests.'
 
 def test():
     for settings in SETTINGS:

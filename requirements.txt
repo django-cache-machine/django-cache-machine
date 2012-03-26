@@ -2,7 +2,7 @@
 sphinx
 mock
 django-nose
--e svn+http://code.djangoproject.com/svn/django/trunk@16922#egg=Django
+django==1.4
 python-memcached
 -e git://github.com/jbalogh/test-utils.git#egg=test-utils
 fabric
