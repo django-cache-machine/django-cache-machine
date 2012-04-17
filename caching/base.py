@@ -327,8 +327,9 @@ class MethodWrapper(object):
         k = lambda o: o.cache_key if hasattr(o, 'cache_key') else o
         arg_keys = map(k, args)
         kwarg_keys = [(key, k(val)) for key, val in kwargs.items()]
-        key = 'm:%s:%s:%s:%s' % (self.obj.cache_key, self.func.__name__,
-                                 arg_keys, kwarg_keys)
+        key_parts = ('m', self.obj.cache_key, self.func.__name__,
+                     arg_keys, kwarg_keys)
+        key = ':'.join(map(encoding.smart_unicode, key_parts))
         if key not in self.cache:
             f = functools.partial(self.func, self.obj, *args, **kwargs)
             self.cache[key] = cached_with(self.obj, f, key)
