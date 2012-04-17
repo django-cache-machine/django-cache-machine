@@ -69,6 +69,13 @@ short enough that stale counts won't be a big deal.  ::
 
     CACHE_COUNT_TIMEOUT = 60  # seconds, not too long.
 
+Empty querysets
+^^^^^^^^^^^^^^^
+
+By default cache machine will not cache empty querysets. To cache them::
+
+    CACHE_EMPTY_QUERYSETS = True
+
 
 Cache Manager
 -------------
