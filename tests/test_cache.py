@@ -402,6 +402,17 @@ class CachingTestCase(ExtraAppTestCase):
         # Raised an exception before fixing #2.
         eq_([], list(User.objects.filter(pk__in=[])))
 
+    def test_empty_queryset(self):
+        for k in (1, 1):
+            with self.assertNumQueries(k):
+                eq_(len(Addon.objects.filter(pk=42)), 0)
+
+    @mock.patch('caching.base.CACHE_EMPTY_QUERYSETS', True)
+    def test_cache_empty_queryset(self):
+        for k in (1, 0):
+            with self.assertNumQueries(k):
+                eq_(len(Addon.objects.filter(pk=42)), 0)
+
     def test_invalidate_empty_queryset(self):
         u = User.objects.create()
         eq_(list(u.addon_set.all()), [])
