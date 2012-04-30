@@ -125,9 +125,9 @@ class CachingQuerySet(models.query.QuerySet):
 
     def flush_key(self):
         return flush_key(self.query_key())
-
     def query_key(self):
-        sql, params = self.query.get_compiler(using=self.db).as_sql()
+        clone = self.query.clone()
+        sql, params = clone.get_compiler(using=self.db).as_sql()
         return sql % params
 
     def iterator(self):
