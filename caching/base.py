@@ -79,13 +79,13 @@ class CacheMachine(object):
     def query_key(self):
         """
         Generate the cache key for this query.
-        Database router info is included to avoid the scenario where
-        related cached objects from one DB (e.g. slave) 
-        are saved in another DB (e.g. master),
-        throwing a Django ValueError in the process.
-        Django prevents cross DB model saving among related objects.
+
+        Database router info is included to avoid the scenario where related
+        cached objects from one DB (e.g. slave) are saved in another DB (e.g.
+        master), throwing a Django ValueError in the process. Django prevents
+        cross DB model saving among related objects.
         """
-        query_db_string = 'qs:{}::db:{}'.format(self.query_string, self.db)
+        query_db_string = u'qs:{}::db:{}'.format(self.query_string, self.db)
         return make_key(query_db_string, with_locale=False)
 
     def __iter__(self):
