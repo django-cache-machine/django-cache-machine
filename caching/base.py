@@ -70,14 +70,23 @@ class CacheMachine(object):
     called to get an iterator over some database results.
     """
 
-    def __init__(self, query_string, iter_function, timeout=None):
+    def __init__(self, query_string, iter_function, timeout=None, db='default'):
         self.query_string = query_string
         self.iter_function = iter_function
         self.timeout = timeout
+        self.db = db
 
     def query_key(self):
-        """Generate the cache key for this query."""
-        return make_key('qs:%s' % self.query_string, with_locale=False)
+        """
+        Generate the cache key for this query.
+        Database router info is included to avoid the scenario where
+        related cached objects from one DB (e.g. slave) 
+        are saved in another DB (e.g. master),
+        throwing a Django ValueError in the process.
+        Django prevents cross DB model saving among related objects.
+        """
+        query_db_string = 'qs:{}::db:{}'.format(self.query_string, self.db)
+        return make_key(query_db_string, with_locale=False)
 
     def __iter__(self):
         try:
@@ -142,7 +151,7 @@ class CachingQuerySet(models.query.QuerySet):
                 return iterator()
             if FETCH_BY_ID:
                 iterator = self.fetch_by_id
-            return iter(CacheMachine(query_string, iterator, self.timeout))
+            return iter(CacheMachine(query_string, iterator, self.timeout, db=self.db))
 
     def fetch_by_id(self):
         """
