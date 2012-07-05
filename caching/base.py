@@ -85,7 +85,7 @@ class CacheMachine(object):
         master), throwing a Django ValueError in the process. Django prevents
         cross DB model saving among related objects.
         """
-        query_db_string = u'qs:{}::db:{}'.format(self.query_string, self.db)
+        query_db_string = u'qs:%s::db:%s' % (self.query_string, self.db)
         return make_key(query_db_string, with_locale=False)
 
     def __iter__(self):
