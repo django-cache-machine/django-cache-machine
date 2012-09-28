@@ -25,6 +25,7 @@ NO_CACHE = -1
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 FETCH_BY_ID = getattr(settings, 'FETCH_BY_ID', False)
 CACHE_EMPTY_QUERYSETS = getattr(settings, 'CACHE_EMPTY_QUERYSETS', False)
+TIMEOUT = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
 
 
 class CachingManager(models.Manager):
@@ -198,13 +199,12 @@ class CachingQuerySet(models.query.QuerySet):
         return others
 
     def count(self):
-        timeout = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
         super_count = super(CachingQuerySet, self).count
         query_string = 'count:%s' % self.query_key()
-        if self.timeout == NO_CACHE or timeout is None:
+        if self.timeout == NO_CACHE or TIMEOUT is None:
             return super_count()
         else:
-            return cached_with(self, super_count, query_string, timeout)
+            return cached_with(self, super_count, query_string, TIMEOUT)
 
     def cache(self, timeout=None):
         qs = self._clone()

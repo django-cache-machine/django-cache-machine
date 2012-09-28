@@ -20,12 +20,12 @@ class CachingTestCase(ExtraAppTestCase):
 
     def setUp(self):
         cache.clear()
-        self.old_timeout = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
+        self.old_timeout = caching.TIMEOUT
         if getattr(settings, 'CACHE_MACHINE_USE_REDIS', False):
             invalidation.redis.flushall()
 
     def tearDown(self):
-        settings.CACHE_COUNT_TIMEOUT = self.old_timeout
+        caching.TIMEOUT = self.old_timeout
 
     def test_flush_key(self):
         """flush_key should work for objects or strings."""
@@ -145,7 +145,7 @@ class CachingTestCase(ExtraAppTestCase):
 
     @mock.patch('caching.base.cache')
     def test_count_cache(self, cache_mock):
-        settings.CACHE_COUNT_TIMEOUT = 60
+        caching.TIMEOUT = 60
         cache_mock.scheme = 'memcached'
         cache_mock.get.return_value = None
 
@@ -159,13 +159,13 @@ class CachingTestCase(ExtraAppTestCase):
 
     @mock.patch('caching.base.cached')
     def test_count_none_timeout(self, cached_mock):
-        settings.CACHE_COUNT_TIMEOUT = None
+        caching.TIMEOUT = None
         Addon.objects.count()
         eq_(cached_mock.call_count, 0)
 
     @mock.patch('caching.base.cached')
     def test_count_nocache(self, cached_mock):
-        settings.CACHE_COUNT_TIMEOUT = 60
+        caching.TIMEOUT = 60
         Addon.objects.no_cache().count()
         eq_(cached_mock.call_count, 0)
 
