@@ -9,7 +9,7 @@ TEST_RUNNER = 'django_nose.runner.NoseTestSuiteRunner'
 
 DATABASES = {
     'default': {
-        'NAME': 'test.db',
+        'NAME': ':memory:',
         'ENGINE': 'django.db.backends.sqlite3',
     }
 }

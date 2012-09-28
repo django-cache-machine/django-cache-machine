@@ -40,7 +40,7 @@ except Exception:
 def test():
     for settings in SETTINGS:
         print settings
-        os.environ['DJANGO_SETTINGS_MODULE'] = 'cache-machine.%s' % settings
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'cache_machine.%s' % settings
         local('django-admin.py test')
 
 
