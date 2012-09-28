@@ -28,7 +28,8 @@ def doc(kind='html'):
 
 SETTINGS = ('locmem_settings',
             'settings',
-            'memcache_byid')
+            'memcache_byid',
+            'custom_backend')
 
 try:
     import redis

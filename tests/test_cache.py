@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from django.conf import settings
-from django.core.cache import cache
 from django.utils import translation, encoding
 
 import jinja2
@@ -10,6 +9,8 @@ from nose.tools import eq_
 from test_utils import ExtraAppTestCase
 import caching.base as caching
 from caching import invalidation
+
+cache = invalidation.cache
 
 from testapp.models import Addon, User
 

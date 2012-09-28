@@ -57,6 +57,25 @@ Note that we have to specify the class, not the module, for the ``BACKEND``
 property, and that the ``PREFIX`` is optional. The ``LOCATION`` may be a
 string, instead of a list, if you only have one server.
 
+If you require the default cache backend to be a different type of
+backend or want Cache Machine to use a specific caching server simply
+define a seperate ``cache_machine`` entry for the ``CACHES`` setting,
+e.g.::
+
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.memcached.CacheClass',
+            'LOCATION': 'server-1:11211',
+        },
+        'cache_machine': {
+            'BACKEND': 'caching.backends.memcached.CacheClass',
+            'LOCATION': [
+                'server-1:11211',
+                'server-2:11211',
+            ],
+            'PREFIX': 'weee:',
+        },    
+    }
 
 COUNT queries
 ^^^^^^^^^^^^^

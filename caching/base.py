@@ -2,13 +2,12 @@ import functools
 import logging
 
 from django.conf import settings
-from django.core.cache import cache
 from django.db import models
 from django.db.models import signals
 from django.db.models.sql import query
 from django.utils import encoding
 
-from .invalidation import invalidator, flush_key, make_key, byid
+from .invalidation import invalidator, flush_key, make_key, byid, cache
 
 
 class NullHandler(logging.Handler):
