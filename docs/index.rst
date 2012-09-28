@@ -58,9 +58,9 @@ property, and that the ``PREFIX`` is optional. The ``LOCATION`` may be a
 string, instead of a list, if you only have one server.
 
 If you require the default cache backend to be a different type of
-backend or want Cache Machine to use a specific caching server simply
-define a seperate ``cache_machine`` entry for the ``CACHES`` setting,
-e.g.::
+cache backend or want Cache Machine to use specific cache server
+options simply define a separate ``cache_machine`` entry for the
+``CACHES`` setting, e.g.::
 
     CACHES = {
         'default': {
