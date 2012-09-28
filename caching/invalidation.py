@@ -64,7 +64,6 @@ def safe_redis(return_type):
     return decorator
 
 
-
 class Invalidator(object):
 
     def invalidate_keys(self, keys):

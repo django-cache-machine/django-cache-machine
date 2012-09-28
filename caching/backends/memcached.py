@@ -1,5 +1,4 @@
 from django.core.cache.backends import memcached
-from django.utils.encoding import smart_str
 
 
 # Add infinite timeout support to the memcached backend.
