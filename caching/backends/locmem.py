@@ -7,12 +7,12 @@ class CacheClass(locmem.CacheClass):
     def add(self, key, value, timeout=None, version=None):
         if timeout == 0:
             timeout = Infinity
-        return super(CacheClass, self).add(key, value, timeout)
+        return super(CacheClass, self).add(key, value, timeout, version)
 
     def set(self, key, value, timeout=None, version=None):
         if timeout == 0:
             timeout = Infinity
-        return super(CacheClass, self).set(key, value, timeout)
+        return super(CacheClass, self).set(key, value, timeout, version)
 
 
 class _Infinity(object):
