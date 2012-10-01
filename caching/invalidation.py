@@ -17,7 +17,7 @@ except ImportError:
 # Look for an own cache first before falling back to the default cache
 try:
     cache = get_cache('cache_machine')
-except InvalidCacheBackendError:
+except (InvalidCacheBackendError, ValueError):
     cache = default_cache
 
 
