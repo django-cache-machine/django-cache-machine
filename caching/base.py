@@ -220,7 +220,7 @@ class CachingQuerySet(models.query.QuerySet):
         return qs
 
 
-class CachingMixin:
+class CachingMixin(object):
     """Inherit from this class to get caching and invalidation helpers."""
 
     def flush_key(self):
