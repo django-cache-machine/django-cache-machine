@@ -1,0 +1,18 @@
+language: python
+services:
+  - memcached
+  - redis-server
+python:
+  - "2.6"
+  - "2.7"
+before_install:
+  - export PIP_USE_MIRRORS=true
+  - export PIP_INDEX_URL=https://simple.crate.io/
+install:
+  - pip install -e .
+  - pip install -r requirements.txt Django==$DJANGO
+script:
+  - fab test
+env:
+  - DJANGO=1.3.3
+  - DJANGO=1.4.1

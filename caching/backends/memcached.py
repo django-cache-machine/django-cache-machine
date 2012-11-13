@@ -1,16 +1,28 @@
+import django
 from django.core.cache.backends import memcached
-from django.utils.encoding import smart_str
 
 
 # Add infinite timeout support to the memcached backend.
-class CacheClass(memcached.CacheClass):
+class InfinityMixin(object):
 
     def add(self, key, value, timeout=None, version=None):
         if timeout is None:
             timeout = self.default_timeout
-        return super(CacheClass, self).add(key, value, timeout, version)
+        return super(InfinityMixin, self).add(key, value, timeout, version)
 
     def set(self, key, value, timeout=None, version=None):
         if timeout is None:
             timeout = self.default_timeout
-        return super(CacheClass, self).set(key, value, timeout, version)
+        return super(InfinityMixin, self).set(key, value, timeout, version)
+
+
+class CacheClass(InfinityMixin, memcached.CacheClass):
+    pass
+
+if django.VERSION[:2] >= (1, 3):
+
+    class MemcachedCache(InfinityMixin, memcached.MemcachedCache):
+        pass
+
+    class PyLibMCCache(InfinityMixin, memcached.PyLibMCCache):
+        pass

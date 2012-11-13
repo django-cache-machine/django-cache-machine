@@ -5,13 +5,20 @@ import logging
 import socket
 
 from django.conf import settings
-from django.core.cache import cache, parse_backend_uri
+from django.core.cache import cache as default_cache, get_cache, parse_backend_uri
+from django.core.cache.backends.base import InvalidCacheBackendError
 from django.utils import encoding, translation
 
 try:
     import redis as redislib
 except ImportError:
     redislib = None
+
+# Look for an own cache first before falling back to the default cache
+try:
+    cache = get_cache('cache_machine')
+except (InvalidCacheBackendError, ValueError):
+    cache = default_cache
 
 
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
@@ -62,7 +69,6 @@ def safe_redis(return_type):
                     return return_type
         return wrapper
     return decorator
-
 
 
 class Invalidator(object):

@@ -1,6 +1,6 @@
 CACHES = {
     'default': {
-        'BACKEND': 'caching.backends.memcached.CacheClass',
+        'BACKEND': 'caching.backends.memcached.MemcachedCache',
         'LOCATION': 'localhost:11211',
     },
 }
@@ -9,7 +9,7 @@ TEST_RUNNER = 'django_nose.runner.NoseTestSuiteRunner'
 
 DATABASES = {
     'default': {
-        'NAME': 'test.db',
+        'NAME': ':memory:',
         'ENGINE': 'django.db.backends.sqlite3',
     }
 }

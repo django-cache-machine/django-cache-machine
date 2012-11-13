@@ -44,7 +44,7 @@ With Django 1.3 or higher, you should use the new ``CACHES`` setting::
 
     CACHES = {
         'default': {
-            'BACKEND': 'caching.backends.memcached.CacheClass',
+            'BACKEND': 'caching.backends.memcached.MemcachedCache',
             'LOCATION': [
                 'server-1:11211',
                 'server-2:11211',
@@ -57,6 +57,33 @@ Note that we have to specify the class, not the module, for the ``BACKEND``
 property, and that the ``PREFIX`` is optional. The ``LOCATION`` may be a
 string, instead of a list, if you only have one server.
 
+If you require the default cache backend to be a different type of
+cache backend or want Cache Machine to use specific cache server
+options simply define a separate ``cache_machine`` entry for the
+``CACHES`` setting, e.g.::
+
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+            'LOCATION': 'server-1:11211',
+        },
+        'cache_machine': {
+            'BACKEND': 'caching.backends.memcached.MemcachedCache',
+            'LOCATION': [
+                'server-1:11211',
+                'server-2:11211',
+            ],
+            'PREFIX': 'weee:',
+        },    
+    }
+
+.. note::
+
+    Cache Machine also supports the other memcache backend support by
+    Django >= 1.3 based on pylibmbc_:
+    ``caching.backends.memcached.PyLibMCCache``.
+
+.. _pylibmc: http://sendapatch.se/projects/pylibmc/
 
 COUNT queries
 ^^^^^^^^^^^^^
@@ -75,7 +102,6 @@ Empty querysets
 By default cache machine will not cache empty querysets. To cache them::
 
     CACHE_EMPTY_QUERYSETS = True
-
 
 Cache Manager
 -------------

@@ -2,13 +2,12 @@ import functools
 import logging
 
 from django.conf import settings
-from django.core.cache import cache
 from django.db import models
 from django.db.models import signals
 from django.db.models.sql import query
 from django.utils import encoding
 
-from .invalidation import invalidator, flush_key, make_key, byid
+from .invalidation import invalidator, flush_key, make_key, byid, cache
 
 
 class NullHandler(logging.Handler):
@@ -25,6 +24,7 @@ NO_CACHE = -1
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 FETCH_BY_ID = getattr(settings, 'FETCH_BY_ID', False)
 CACHE_EMPTY_QUERYSETS = getattr(settings, 'CACHE_EMPTY_QUERYSETS', False)
+TIMEOUT = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
 
 
 class CachingManager(models.Manager):
@@ -33,7 +33,7 @@ class CachingManager(models.Manager):
     use_for_related_fields = True
 
     def get_query_set(self):
-        return CachingQuerySet(self.model)
+        return CachingQuerySet(self.model, using=self._db)
 
     def contribute_to_class(self, cls, name):
         signals.post_save.connect(self.post_save, sender=cls)
@@ -134,6 +134,7 @@ class CachingQuerySet(models.query.QuerySet):
 
     def flush_key(self):
         return flush_key(self.query_key())
+
     def query_key(self):
         clone = self.query.clone()
         sql, params = clone.get_compiler(using=self.db).as_sql()
@@ -198,13 +199,12 @@ class CachingQuerySet(models.query.QuerySet):
         return others
 
     def count(self):
-        timeout = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
         super_count = super(CachingQuerySet, self).count
         query_string = 'count:%s' % self.query_key()
-        if self.timeout == NO_CACHE or timeout is None:
+        if self.timeout == NO_CACHE or TIMEOUT is None:
             return super_count()
         else:
-            return cached_with(self, super_count, query_string, timeout)
+            return cached_with(self, super_count, query_string, TIMEOUT)
 
     def cache(self, timeout=None):
         qs = self._clone()
@@ -220,7 +220,7 @@ class CachingQuerySet(models.query.QuerySet):
         return qs
 
 
-class CachingMixin:
+class CachingMixin(object):
     """Inherit from this class to get caching and invalidation helpers."""
 
     def flush_key(self):

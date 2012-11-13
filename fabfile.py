@@ -28,7 +28,8 @@ def doc(kind='html'):
 
 SETTINGS = ('locmem_settings',
             'settings',
-            'memcache_byid')
+            'memcache_byid',
+            'custom_backend')
 
 try:
     import redis
@@ -40,7 +41,7 @@ except Exception:
 def test():
     for settings in SETTINGS:
         print settings
-        os.environ['DJANGO_SETTINGS_MODULE'] = 'cache-machine.%s' % settings
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'cache_machine.%s' % settings
         local('django-admin.py test')
 
 
