@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 from django.conf import settings
+from django.test import TestCase
 from django.utils import translation, encoding
 
 import jinja2
 import mock
 from nose.tools import eq_
 
-from test_utils import ExtraAppTestCase
 import caching.base as caching
 from caching import invalidation
 
@@ -15,7 +15,8 @@ cache = invalidation.cache
 from testapp.models import Addon, User
 
 
-class CachingTestCase(ExtraAppTestCase):
+class CachingTestCase(TestCase):
+    multi_db = True
     fixtures = ['testapp/test_cache.json']
     extra_apps = ['tests.testapp']
 
@@ -439,3 +440,24 @@ class CachingTestCase(ExtraAppTestCase):
         if not getattr(settings, 'CACHE_MACHINE_USE_REDIS', False):
             cache_mock.return_value.values.return_value = [None, [1]]
             eq_(caching.invalidator.get_flush_lists(None), set([1]))
+
+    def test_multidb_cache(self):
+        """ Test where master and slave DB result in two different cache keys """
+        assert Addon.objects.get(id=1).from_cache is False
+        assert Addon.objects.get(id=1).from_cache is True
+
+        from_slave = Addon.objects.using('slave').get(id=1)
+        assert from_slave.from_cache is False
+        assert from_slave._state.db == 'slave'
+
+    def test_multidb_fetch_by_id(self):
+        """ Test where master and slave DB result in two different cache keys with FETCH_BY_ID"""
+        with self.settings(FETCH_BY_ID=True):
+            assert Addon.objects.get(id=1).from_cache is False
+            assert Addon.objects.get(id=1).from_cache is True
+
+            from_slave = Addon.objects.using('slave').get(id=1)
+            assert from_slave.from_cache is False
+            assert from_slave._state.db == 'slave'
+
+

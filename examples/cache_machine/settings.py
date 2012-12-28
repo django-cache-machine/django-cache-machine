@@ -11,11 +11,16 @@ DATABASES = {
     'default': {
         'NAME': ':memory:',
         'ENGINE': 'django.db.backends.sqlite3',
-    }
+    },
+    'slave': {
+        'NAME': 'test_slave.db',
+        'ENGINE': 'django.db.backends.sqlite3',
+        }
 }
 
 INSTALLED_APPS = (
     'django_nose',
+    'tests.testapp',
 )
 
 SECRET_KEY = 'ok'
