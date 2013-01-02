@@ -33,7 +33,7 @@ class CachingManager(models.Manager):
     use_for_related_fields = True
 
     def get_query_set(self):
-        return CachingQuerySet(self.model)
+        return CachingQuerySet(self.model, using=self._db)
 
     def contribute_to_class(self, cls, name):
         signals.post_save.connect(self.post_save, sender=cls)
