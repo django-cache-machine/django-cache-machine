@@ -68,6 +68,10 @@ class CachingTestCase(TestCase):
         a = [x for x in Addon.objects.all() if x.id == 1][0]
         assert a.from_cache is False
 
+        assert Addon.objects.get(id=1).from_cache is True
+        a = [x for x in Addon.objects.all() if x.id == 1][0]
+        assert a.from_cache is True
+
     def test_invalidation_cross_locale(self):
         assert Addon.objects.get(id=1).from_cache is False
         a = [x for x in Addon.objects.all() if x.id == 1][0]
@@ -85,9 +89,6 @@ class CachingTestCase(TestCase):
         assert a.from_cache is True
 
         a.save()
-        assert Addon.objects.get(id=1).from_cache is False
-        a = [x for x in Addon.objects.all() if x.id == 1][0]
-        assert a.from_cache is False
 
         translation.activate(old_locale)
         assert Addon.objects.get(id=1).from_cache is False

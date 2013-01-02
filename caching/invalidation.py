@@ -80,7 +80,7 @@ class Invalidator(object):
         flush, flush_keys = self.find_flush_lists(keys)
 
         if flush:
-            cache.set_many(dict((k, None) for k in flush), 5)
+            cache.delete_many(flush)
         if flush_keys:
             self.clear_flush_lists(flush_keys)
 
