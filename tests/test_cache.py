@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 from django.conf import settings
 from django.core.cache import cache
+from django.test import TestCase
 from django.utils import translation, encoding
 
 import jinja2
 import mock
 from nose.tools import eq_
 
-from test_utils import ExtraAppTestCase
 import caching.base as caching
 from caching import invalidation
 
 from testapp.models import Addon, User
 
 
-class CachingTestCase(ExtraAppTestCase):
+class CachingTestCase(TestCase):
+    multi_db = True
     fixtures = ['testapp/test_cache.json']
     extra_apps = ['tests.testapp']
 
@@ -66,6 +67,10 @@ class CachingTestCase(ExtraAppTestCase):
         a = [x for x in Addon.objects.all() if x.id == 1][0]
         assert a.from_cache is False
 
+        assert Addon.objects.get(id=1).from_cache is True
+        a = [x for x in Addon.objects.all() if x.id == 1][0]
+        assert a.from_cache is True
+
     def test_invalidation_cross_locale(self):
         assert Addon.objects.get(id=1).from_cache is False
         a = [x for x in Addon.objects.all() if x.id == 1][0]
@@ -83,9 +88,6 @@ class CachingTestCase(ExtraAppTestCase):
         assert a.from_cache is True
 
         a.save()
-        assert Addon.objects.get(id=1).from_cache is False
-        a = [x for x in Addon.objects.all() if x.id == 1][0]
-        assert a.from_cache is False
 
         translation.activate(old_locale)
         assert Addon.objects.get(id=1).from_cache is False
@@ -438,3 +440,21 @@ class CachingTestCase(ExtraAppTestCase):
         if not getattr(settings, 'CACHE_MACHINE_USE_REDIS', False):
             cache_mock.return_value.values.return_value = [None, [1]]
             eq_(caching.invalidator.get_flush_lists(None), set([1]))
+
+    def test_multidb_cache(self):
+        """ Test where master and slave DB result in two different cache keys """
+
+        assert Addon.objects.get(id=1).from_cache is False
+        assert Addon.objects.get(id=1).from_cache is True
+
+        from_slave = Addon.objects.using('slave').get(id=1)
+        if getattr(settings, 'FETCH_BY_ID', False):
+            # FETCH_BY_ID is not currently compatible with multiple DBs.
+            assert from_slave.from_cache is False
+            assert from_slave._state.db == 'default'
+            from_slave = Addon.objects.using('slave').get(id=1)
+            assert from_slave.from_cache is True
+            assert from_slave._state.db == 'default'
+        else:
+            assert from_slave.from_cache is False
+            assert from_slave._state.db == 'slave'

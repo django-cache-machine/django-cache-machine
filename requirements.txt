@@ -4,7 +4,6 @@ mock
 django-nose
 django==1.4
 python-memcached
--e git://github.com/jbalogh/test-utils.git#egg=test-utils
 fabric
 jinja2
 redis
