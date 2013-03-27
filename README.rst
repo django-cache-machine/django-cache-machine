@@ -5,13 +5,16 @@ Cache Machine
 Cache Machine provides automatic caching and invalidation for Django models
 through the ORM.
 
-For full docs, see http://jbalogh.me/projects/cache-machine.
+For full docs, see https://cache-machine.readthedocs.org/en/latest/.
+
+.. image:: https://travis-ci.org/jbalogh/django-cache-machine.png
+  :target: https://travis-ci.org/jbalogh/django-cache-machine
 
 
 Requirements
 ------------
 
-Cache Machine requires Django 1.3.  It was written and tested on Python 2.6.
+Cache Machine requires Django 1.3+.  It was written and tested on Python 2.6.
 
 
 Installation
