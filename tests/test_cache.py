@@ -446,18 +446,21 @@ class CachingTestCase(TestCase):
 
     def test_multidb_cache(self):
         """ Test where master and slave DB result in two different cache keys """
-
         assert Addon.objects.get(id=1).from_cache is False
         assert Addon.objects.get(id=1).from_cache is True
 
         from_slave = Addon.objects.using('slave').get(id=1)
-        if getattr(settings, 'FETCH_BY_ID', False):
-            # FETCH_BY_ID is not currently compatible with multiple DBs.
-            assert from_slave.from_cache is False
-            assert from_slave._state.db == 'default'
+        assert from_slave.from_cache is False
+        assert from_slave._state.db == 'slave'
+
+    def test_multidb_fetch_by_id(self):
+        """ Test where master and slave DB result in two different cache keys with FETCH_BY_ID"""
+        with self.settings(FETCH_BY_ID=True):
+            assert Addon.objects.get(id=1).from_cache is False
+            assert Addon.objects.get(id=1).from_cache is True
+
             from_slave = Addon.objects.using('slave').get(id=1)
-            assert from_slave.from_cache is True
-            assert from_slave._state.db == 'default'
-        else:
             assert from_slave.from_cache is False
             assert from_slave._state.db == 'slave'
+
+
