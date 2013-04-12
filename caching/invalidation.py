@@ -45,7 +45,7 @@ def flush_key(obj):
 
 
 def byid(obj):
-    key = obj if isinstance(obj, basestring) else obj._cache_key(obj.pk)
+    key = obj if isinstance(obj, basestring) else obj.cache_key
     return make_key('byid:' + key)
 
 

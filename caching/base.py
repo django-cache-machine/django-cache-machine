@@ -167,7 +167,7 @@ class CachingQuerySet(models.query.QuerySet):
         # order_by.
         vals = self.values_list('pk', *self.query.extra.keys())
         pks = [val[0] for val in vals]
-        keys = dict((byid(self.model._cache_key(pk)), pk) for pk in pks)
+        keys = dict((byid(self.model._cache_key(pk, self.db)), pk) for pk in pks)
         cached = dict((k, v) for k, v in cache.get_many(keys).items()
                       if v is not None)
 
@@ -229,16 +229,16 @@ class CachingMixin(object):
     @property
     def cache_key(self):
         """Return a cache key based on the object's primary key."""
-        return self._cache_key(self.pk)
+        return self._cache_key(self.pk, self._state.db)
 
     @classmethod
-    def _cache_key(cls, pk):
+    def _cache_key(cls, pk, db):
         """
         Return a string that uniquely identifies the object.
 
         For the Addon class, with a pk of 2, we get "o:addons.addon:2".
         """
-        key_parts = ('o', cls._meta, pk)
+        key_parts = ('o', cls._meta, pk, db)
         return ':'.join(map(encoding.smart_unicode, key_parts))
 
     def _cache_keys(self):
@@ -246,7 +246,7 @@ class CachingMixin(object):
         fks = dict((f, getattr(self, f.attname)) for f in self._meta.fields
                     if isinstance(f, models.ForeignKey))
 
-        keys = [fk.rel.to._cache_key(val) for fk, val in fks.items()
+        keys = [fk.rel.to._cache_key(val, self._state.db) for fk, val in fks.items()
                 if val is not None and hasattr(fk.rel.to, '_cache_key')]
         return (self.cache_key,) + tuple(keys)
 
