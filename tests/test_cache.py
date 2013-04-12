@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import django
 from django.conf import settings
 from django.test import TestCase
 from django.utils import translation, encoding
@@ -13,6 +14,22 @@ from caching import invalidation
 cache = invalidation.cache
 
 from testapp.models import Addon, User
+
+if django.get_version().startswith('1.3'):
+    class settings_patch(object):
+        def __init__(self, **kwargs):
+            self.options = kwargs
+
+        def __enter__(self):
+            self._old_settings = dict((k, getattr(settings, k, None)) for k in self.options)
+            for k, v in self.options.items():
+                setattr(settings, k, v)
+
+        def __exit__(self, *args):
+            for k in self.options:
+                setattr(settings, k, self._old_settings[k])
+
+    TestCase.settings = settings_patch
 
 
 class CachingTestCase(TestCase):
