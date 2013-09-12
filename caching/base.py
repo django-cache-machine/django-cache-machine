@@ -200,7 +200,10 @@ class CachingQuerySet(models.query.QuerySet):
 
     def count(self):
         super_count = super(CachingQuerySet, self).count
-        query_string = 'count:%s' % self.query_key()
+        try:
+            query_string = 'count:%s' % self.query_key()
+        except query.EmptyResultSet:
+            return super_count()
         if self.timeout == NO_CACHE or TIMEOUT is None:
             return super_count()
         else:

@@ -199,6 +199,11 @@ class CachingTestCase(TestCase):
         Addon.objects.no_cache().count()
         eq_(cached_mock.call_count, 0)
 
+    @mock.patch('caching.base.cache')
+    def test_count_cache_empty(self, cache_mock):
+        q = Addon.objects.filter(val__in=[])
+        count = q.count()
+
     def test_queryset_flush_list(self):
         """Check that we're making a flush list for the queryset."""
         q = Addon.objects.all()
