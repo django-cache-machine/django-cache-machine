@@ -58,6 +58,15 @@ class CachingTestCase(TestCase):
         keys = set((a.cache_key, a.author1.cache_key, a.author2.cache_key))
         eq_(set(a._cache_keys()), keys)
 
+    def test_cache_query_set(self):
+        """Basic cache test: second get comes from cache."""
+        self.assertEquals(len(User.objects.all()), 2)
+        user = User(name = "test01")
+        user.save()
+        for x in User.objects.all():
+          print x.name
+        self.assertEquals(len(User.objects.all()), 3)
+
     def test_cache(self):
         """Basic cache test: second get comes from cache."""
         assert Addon.objects.get(id=1).from_cache is False
