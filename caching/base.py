@@ -24,7 +24,7 @@ NO_CACHE = -1
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 FETCH_BY_ID = getattr(settings, 'FETCH_BY_ID', False)
 CACHE_EMPTY_QUERYSETS = getattr(settings, 'CACHE_EMPTY_QUERYSETS', False)
-TIMEOUT = getattr(settings, 'CACHE_COUNT_TIMEOUT', DEFAULT_TIMEOUT)
+TIMEOUT = getattr(settings, 'CACHE_COUNT_TIMEOUT', NO_CACHE)
 
 
 class CachingManager(models.Manager):
