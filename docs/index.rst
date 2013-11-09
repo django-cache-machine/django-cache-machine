@@ -12,35 +12,15 @@ Settings
 --------
 
 Before we start, you'll have to update your ``settings.py`` to use one of the
-caching backends provided by Cache Machine.  Django's built-in caching backends
-don't allow infinite cache timeouts, which are critical for doing invalidation
-(see below).  Cache Machine extends the ``locmem`` and ``memcached`` backends
-provided by Django to enable indefinite caching when a timeout of ``0`` is
+caching backends provided by Cache Machine.  Prior to Django 1.6, Django's
+built-in caching backends did not allow for infinite cache timeouts,
+which are critical for doing invalidation (see below).  Cache Machine extends
+the ``locmem`` and ``memcached`` backends provided by Django to enable
+indefinite caching when a timeout of ``caching.base.FOREVER`` is
 passed.  If you were already using one of these backends, you can probably go
-on using them just as you were.  If you were caching things with a timeout of
-``0``, there will be problems with those entities now getting cached forever.
-You shouldn't have been doing that anyways.
+on using them just as you were.
 
-For memcached::
-
-    CACHE_BACKEND = 'caching.backends.memcached://localhost:11211'
-
-For locmem (only recommended for testing)::
-
-    CACHE_BACKEND = 'caching.backends.locmem://'
-
-Cache Machine will not work properly with the file or database cache backends.
-
-If you want to set a prefix for all keys in Cache Machine, define
-``CACHE_PREFIX`` in settings.py::
-
-    CACHE_PREFIX = 'weee:'
-
-
-Django 1.3
-^^^^^^^^^^
-
-With Django 1.3 or higher, you should use the new ``CACHES`` setting::
+With Django 1.3 or higher, you should use the ``CACHES`` setting::
 
     CACHES = {
         'default': {
@@ -74,7 +54,7 @@ options simply define a separate ``cache_machine`` entry for the
                 'server-2:11211',
             ],
             'PREFIX': 'weee:',
-        },    
+        },
     }
 
 .. note::
@@ -84,6 +64,25 @@ options simply define a separate ``cache_machine`` entry for the
     ``caching.backends.memcached.PyLibMCCache``.
 
 .. _pylibmc: http://sendapatch.se/projects/pylibmc/
+
+
+Prior to Django 1.3
+^^^^^^^^^^^^^^^^^^^
+
+For memcached::
+
+    CACHE_BACKEND = 'caching.backends.memcached://localhost:11211'
+
+For locmem (only recommended for testing)::
+
+    CACHE_BACKEND = 'caching.backends.locmem://'
+
+Cache Machine will not work properly with the file or database cache backends.
+
+If you want to set a prefix for all keys in Cache Machine, define
+``CACHE_PREFIX`` in settings.py::
+
+    CACHE_PREFIX = 'weee:'
 
 COUNT queries
 ^^^^^^^^^^^^^
@@ -95,6 +94,10 @@ recommend a short cache timeout; long enough to avoid repetitive queries, but
 short enough that stale counts won't be a big deal.  ::
 
     CACHE_COUNT_TIMEOUT = 60  # seconds, not too long.
+
+By default, calls to ``QuerySet.count()`` are not cached. They are only cached
+if ``CACHE_COUNT_TIMEOUT`` is set to a value other than
+``caching.base.NO_CACHE``.
 
 Empty querysets
 ^^^^^^^^^^^^^^^
@@ -118,12 +121,12 @@ Here's what a minimal cached model looks like::
 
     from django.db import models
 
-    import caching.base
+    from caching.base imoprt CachingManager, CachingMixin
 
-    class Zomg(caching.base.CachingMixin, models.Model):
+    class Zomg(CachingMixin, models.Model):
         val = models.IntegerField()
 
-        objects = caching.base.CachingManager()
+        objects = CachingManager()
 
 Whenever you run a query, ``CachingQuerySet`` will try to find that query in
 the cache.  Queries are keyed by ``{prefix}:{sql}``. If it's there, we return
@@ -162,6 +165,23 @@ The foundations of this module were derived from `Mike Malone's`_
 .. _`Mike Malone's`: http://immike.net/
 .. _django-caching: http://github.com/mmalone/django-caching/
 
+Changing the timeout of a CachingQuerySet instance
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, the timeout for a ``CachingQuerySet`` instance will be the timeout
+of the underlying cache being used by Cache Machine. To change the timeout of
+a ``CachingQuerySet`` instance, you can assign a different value to the
+``timeout`` attribute which represents the number of seconds to cache for
+
+For example::
+
+    def get_objects(name):
+        qs = CachedClass.objects.filter(name=name)
+        qs.timeout = 5  # seconds
+        return qs
+
+To disable caching for a particular ``CachingQuerySet`` instance, set the
+``timeout`` attribute to ``caching.base.NO_CACHE``.
 
 Manual Caching
 --------------

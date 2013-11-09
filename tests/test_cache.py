@@ -8,8 +8,7 @@ import jinja2
 import mock
 from nose.tools import eq_
 
-import caching.base as caching
-from caching import invalidation
+from caching import base, invalidation
 
 cache = invalidation.cache
 
@@ -34,22 +33,22 @@ if django.get_version().startswith('1.3'):
 
 class CachingTestCase(TestCase):
     multi_db = True
-    fixtures = ['testapp/test_cache.json']
+    fixtures = ['tests/testapp/fixtures/testapp/test_cache.json']
     extra_apps = ['tests.testapp']
 
     def setUp(self):
         cache.clear()
-        self.old_timeout = caching.TIMEOUT
+        self.old_timeout = base.TIMEOUT
         if getattr(settings, 'CACHE_MACHINE_USE_REDIS', False):
             invalidation.redis.flushall()
 
     def tearDown(self):
-        caching.TIMEOUT = self.old_timeout
+        base.TIMEOUT = self.old_timeout
 
     def test_flush_key(self):
         """flush_key should work for objects or strings."""
         a = Addon.objects.get(id=1)
-        eq_(caching.flush_key(a.cache_key), caching.flush_key(a))
+        eq_(base.flush_key(a.cache_key), base.flush_key(a))
 
     def test_cache_key(self):
         a = Addon.objects.get(id=1)
@@ -165,9 +164,9 @@ class CachingTestCase(TestCase):
 
     @mock.patch('caching.base.CacheMachine')
     def test_raw_nocache(self, CacheMachine):
-        caching.TIMEOUT = 60
+        base.TIMEOUT = 60
         sql = 'SELECT * FROM %s WHERE id = 1' % Addon._meta.db_table
-        raw = list(Addon.objects.raw(sql, timeout=-1))
+        raw = list(Addon.objects.raw(sql, timeout=base.NO_CACHE))
         eq_(len(raw), 1)
         raw_addon = raw[0]
         assert not hasattr(raw_addon, 'from_cache')
@@ -175,7 +174,7 @@ class CachingTestCase(TestCase):
 
     @mock.patch('caching.base.cache')
     def test_count_cache(self, cache_mock):
-        caching.TIMEOUT = 60
+        base.TIMEOUT = 60
         cache_mock.scheme = 'memcached'
         cache_mock.get.return_value = None
 
@@ -189,13 +188,13 @@ class CachingTestCase(TestCase):
 
     @mock.patch('caching.base.cached')
     def test_count_none_timeout(self, cached_mock):
-        caching.TIMEOUT = None
+        base.TIMEOUT = base.NO_CACHE
         Addon.objects.count()
         eq_(cached_mock.call_count, 0)
 
     @mock.patch('caching.base.cached')
     def test_count_nocache(self, cached_mock):
-        caching.TIMEOUT = 60
+        base.TIMEOUT = 60
         Addon.objects.no_cache().count()
         eq_(cached_mock.call_count, 0)
 
@@ -203,7 +202,7 @@ class CachingTestCase(TestCase):
         """Check that we're making a flush list for the queryset."""
         q = Addon.objects.all()
         objects = list(q)  # Evaluate the queryset so it gets cached.
-        caching.invalidator.add_to_flush_list({q.flush_key(): ['remove-me']})
+        base.invalidator.add_to_flush_list({q.flush_key(): ['remove-me']})
         cache.set('remove-me', 15)
 
         Addon.objects.invalidate(objects[0])
@@ -299,7 +298,7 @@ class CachingTestCase(TestCase):
             return counter.call_count
 
         a = Addon.objects.get(id=1)
-        f = lambda: caching.cached_with(a, expensive, 'key')
+        f = lambda: base.cached_with(a, expensive, 'key')
 
         # Only gets called once.
         eq_(f(), 1)
@@ -319,7 +318,7 @@ class CachingTestCase(TestCase):
 
         counter.reset_mock()
         q = Addon.objects.filter(id=1)
-        f = lambda: caching.cached_with(q, expensive, 'key')
+        f = lambda: base.cached_with(q, expensive, 'key')
 
         # Only gets called once.
         eq_(f(), 1)
@@ -337,7 +336,7 @@ class CachingTestCase(TestCase):
             counter()
             return counter.call_count
 
-        eq_(caching.cached_with([], f, 'key'), 1)
+        eq_(base.cached_with([], f, 'key'), 1)
 
     def test_cached_with_unicode(self):
         u = ':'.join(map(encoding.smart_str, [u'תיאור אוסף']))
@@ -345,7 +344,7 @@ class CachingTestCase(TestCase):
         obj.query_key.return_value = u'xxx'
         obj.flush_key.return_value = 'key'
         f = lambda: 1
-        eq_(caching.cached_with(obj, f, 'adf:%s' % u), 1)
+        eq_(base.cached_with(obj, f, 'adf:%s' % u), 1)
 
     def test_cached_method(self):
         a = Addon.objects.get(id=1)
@@ -460,14 +459,14 @@ class CachingTestCase(TestCase):
         translation.activate(u'en-US')
         f = 'fragment\xe9\x9b\xbb\xe8\x85\xa6\xe7\x8e'
         # This would crash with a unicode error.
-        caching.make_key(f, with_locale=True)
+        base.make_key(f, with_locale=True)
         translation.deactivate()
 
     @mock.patch('caching.invalidation.cache.get_many')
     def test_get_flush_lists_none(self, cache_mock):
         if not getattr(settings, 'CACHE_MACHINE_USE_REDIS', False):
             cache_mock.return_value.values.return_value = [None, [1]]
-            eq_(caching.invalidator.get_flush_lists(None), set([1]))
+            eq_(base.invalidator.get_flush_lists(None), set([1]))
 
     def test_multidb_cache(self):
         """ Test where master and slave DB result in two different cache keys """
@@ -487,5 +486,3 @@ class CachingTestCase(TestCase):
             from_slave = Addon.objects.using('slave').get(id=1)
             assert from_slave.from_cache is False
             assert from_slave._state.db == 'slave'
-
-
