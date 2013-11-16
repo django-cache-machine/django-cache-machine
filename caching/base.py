@@ -7,6 +7,7 @@ from django.db.models import signals
 from django.db.models.sql import query
 from django.utils import encoding
 
+from .compat import DEFAULT_TIMEOUT, FOREVER
 from .invalidation import invalidator, flush_key, make_key, byid, cache
 
 
@@ -19,12 +20,11 @@ class NullHandler(logging.Handler):
 log = logging.getLogger('caching')
 log.addHandler(NullHandler())
 
-FOREVER = 0
 NO_CACHE = -1
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 FETCH_BY_ID = getattr(settings, 'FETCH_BY_ID', False)
 CACHE_EMPTY_QUERYSETS = getattr(settings, 'CACHE_EMPTY_QUERYSETS', False)
-TIMEOUT = getattr(settings, 'CACHE_COUNT_TIMEOUT', None)
+TIMEOUT = getattr(settings, 'CACHE_COUNT_TIMEOUT', NO_CACHE)
 
 
 class CachingManager(models.Manager):
@@ -55,7 +55,7 @@ class CachingManager(models.Manager):
         return CachingRawQuerySet(raw_query, self.model, params=params,
                                   using=self._db, *args, **kwargs)
 
-    def cache(self, timeout=None):
+    def cache(self, timeout=DEFAULT_TIMEOUT):
         return self.get_query_set().cache(timeout)
 
     def no_cache(self):
@@ -70,7 +70,7 @@ class CacheMachine(object):
     called to get an iterator over some database results.
     """
 
-    def __init__(self, query_string, iter_function, timeout=None, db='default'):
+    def __init__(self, query_string, iter_function, timeout=DEFAULT_TIMEOUT, db='default'):
         self.query_string = query_string
         self.iter_function = iter_function
         self.timeout = timeout
@@ -130,7 +130,7 @@ class CachingQuerySet(models.query.QuerySet):
 
     def __init__(self, *args, **kw):
         super(CachingQuerySet, self).__init__(*args, **kw)
-        self.timeout = None
+        self.timeout = DEFAULT_TIMEOUT
 
     def flush_key(self):
         return flush_key(self.query_key())
@@ -201,12 +201,12 @@ class CachingQuerySet(models.query.QuerySet):
     def count(self):
         super_count = super(CachingQuerySet, self).count
         query_string = 'count:%s' % self.query_key()
-        if self.timeout == NO_CACHE or TIMEOUT is None:
+        if self.timeout == NO_CACHE or TIMEOUT == NO_CACHE:
             return super_count()
         else:
             return cached_with(self, super_count, query_string, TIMEOUT)
 
-    def cache(self, timeout=None):
+    def cache(self, timeout=DEFAULT_TIMEOUT):
         qs = self._clone()
         qs.timeout = timeout
         return qs
@@ -254,7 +254,7 @@ class CachingMixin(object):
 class CachingRawQuerySet(models.query.RawQuerySet):
 
     def __init__(self, *args, **kw):
-        timeout = kw.pop('timeout', None)
+        timeout = kw.pop('timeout', DEFAULT_TIMEOUT)
         super(CachingRawQuerySet, self).__init__(*args, **kw)
         self.timeout = timeout
 
@@ -262,7 +262,8 @@ class CachingRawQuerySet(models.query.RawQuerySet):
         iterator = super(CachingRawQuerySet, self).__iter__
         if self.timeout == NO_CACHE:
             iterator = iterator()
-            while True: yield iterator.next()
+            while True:
+                yield iterator.next()
         else:
             sql = self.raw_query % tuple(self.params)
             for obj in CacheMachine(sql, iterator, timeout=self.timeout):
@@ -274,7 +275,7 @@ def _function_cache_key(key):
     return make_key('f:%s' % key, with_locale=True)
 
 
-def cached(function, key_, duration=None):
+def cached(function, key_, duration=DEFAULT_TIMEOUT):
     """Only calls the function if ``key`` is not already in the cache."""
     key = _function_cache_key(key_)
     val = cache.get(key)
@@ -287,7 +288,7 @@ def cached(function, key_, duration=None):
     return val
 
 
-def cached_with(obj, f, f_key, timeout=None):
+def cached_with(obj, f, f_key, timeout=DEFAULT_TIMEOUT):
     """Helper for caching a function call within an object's flush list."""
     try:
         obj_key = (obj.query_key() if hasattr(obj, 'query_key')
