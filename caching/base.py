@@ -250,12 +250,13 @@ class CachingMixin(object):
         keys = [fk.rel.to._cache_key(val, self._state.db) for fk, val in fks.items()
                 if val is not None and hasattr(fk.rel.to, '_cache_key')]
 
-        generics = [getattr(self, f.name) for f in self._meta.virtual_fields
+        generics = [f for f in self._meta.virtual_fields
                     if isinstance(f, generic.GenericForeignKey) and
+                    getattr(self, f.ct_field) and
                     hasattr(getattr(self, f.ct_field).model_class(), '_cache_key')]
         if generics:
-            keys = keys + [getattr(self, f.ct_field).model_class()._cache_key(model.pk, self._state.db)
-                           for model in generics]
+            keys = keys + [getattr(self, f.ct_field).model_class()._cache_key(getattr(self, f.fk_field), self._state.db)
+                           for f in generics]
 
         return (self.cache_key,) + tuple(keys)
 

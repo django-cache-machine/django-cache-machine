@@ -36,4 +36,8 @@ class Comment(CachingMixin, models.Model):
     object_id = models.PositiveIntegerField()
     object = generic.GenericForeignKey('object_type', 'object_id')
 
+    object2_type = models.ForeignKey(ContentType, null=True, related_name='+')
+    object2_id = models.PositiveIntegerField(null=True)
+    object2 = generic.GenericForeignKey('object2_type', 'object2_id')
+
     objects = CachingManager()
