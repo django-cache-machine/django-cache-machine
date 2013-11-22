@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import django
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.utils import translation, encoding
 
@@ -13,7 +14,7 @@ from caching import invalidation
 
 cache = invalidation.cache
 
-from testapp.models import Addon, User
+from testapp.models import Addon, Comment, User
 
 if django.get_version().startswith('1.3'):
     class settings_patch(object):
@@ -135,6 +136,24 @@ class CachingTestCase(TestCase):
         a = Addon.objects.get(id=1)
         assert a.from_cache is False
         eq_(a.author1.name, 'fffuuu')
+
+    def test_generic_fk_invalidation(self):
+        "When an object gets invalidated, its generic foreign keys get invalidated"
+        comment = Comment.objects.create(object_id=1,
+                                         object_type=ContentType.objects.get_for_model(Addon))
+
+        Addon.objects.get(id=1)
+        list(Addon.objects.all())
+
+        assert Addon.objects.get(id=1).from_cache is True
+        a = [x for x in Addon.objects.all() if x.id == 1][0]
+        assert a.from_cache is True
+
+        comment.save()
+
+        assert Addon.objects.get(id=1).from_cache is False
+        a = [x for x in Addon.objects.all() if x.id == 1][0]
+        assert a.from_cache is False
 
     def test_raw_cache(self):
         sql = 'SELECT * FROM %s WHERE id = 1' % Addon._meta.db_table

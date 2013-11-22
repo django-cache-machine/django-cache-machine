@@ -1,3 +1,5 @@
+from django.contrib.contenttypes import generic
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
 import mock
@@ -27,3 +29,11 @@ class Addon(CachingMixin, models.Model):
         """This is a docstring for calls()"""
         call_counter()
         return arg, call_counter.call_count
+
+
+class Comment(CachingMixin, models.Model):
+    object_type = models.ForeignKey(ContentType)
+    object_id = models.PositiveIntegerField()
+    object = generic.GenericForeignKey('object_type', 'object_id')
+
+    objects = CachingManager()
