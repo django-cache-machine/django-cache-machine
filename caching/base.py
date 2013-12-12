@@ -195,7 +195,7 @@ class CachingQuerySet(models.query.QuerySet):
         if hasattr(others, 'no_cache'):
             others = others.no_cache()
         if self.query.select_related:
-            others.dup_select_related(self)
+            others.query.select_related = self.query.select_related
         return others
 
     def count(self):
