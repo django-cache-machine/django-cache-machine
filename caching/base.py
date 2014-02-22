@@ -4,7 +4,7 @@ import logging
 from django.conf import settings
 from django.db import models
 from django.db.models import signals
-from django.db.models.sql import query
+from django.db.models.sql import query, EmptyResultSet
 from django.utils import encoding
 
 from .compat import DEFAULT_TIMEOUT, FOREVER
@@ -200,7 +200,10 @@ class CachingQuerySet(models.query.QuerySet):
 
     def count(self):
         super_count = super(CachingQuerySet, self).count
-        query_string = 'count:%s' % self.query_key()
+        try:
+            query_string = 'count:%s' % self.query_key()
+        except query.EmptyResultSet:
+            return 0
         if self.timeout == NO_CACHE or TIMEOUT == NO_CACHE:
             return super_count()
         else:
@@ -290,10 +293,11 @@ def cached(function, key_, duration=DEFAULT_TIMEOUT):
 
 def cached_with(obj, f, f_key, timeout=DEFAULT_TIMEOUT):
     """Helper for caching a function call within an object's flush list."""
+
     try:
         obj_key = (obj.query_key() if hasattr(obj, 'query_key')
                    else obj.cache_key)
-    except AttributeError:
+    except (AttributeError, EmptyResultSet):
         log.warning(u'%r cannot be cached.' % encoding.smart_str(obj))
         return f()
 
