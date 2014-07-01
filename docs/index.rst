@@ -60,10 +60,10 @@ options simply define a separate ``cache_machine`` entry for the
 .. note::
 
     Cache Machine also supports the other memcache backend support by
-    Django >= 1.3 based on pylibmbc_:
+    Django >= 1.3 based on pylibmbc__:
     ``caching.backends.memcached.PyLibMCCache``.
 
-.. _pylibmc: http://sendapatch.se/projects/pylibmc/
+.. __: http://sendapatch.se/projects/pylibmc/
 
 
 Prior to Django 1.3
