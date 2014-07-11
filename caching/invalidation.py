@@ -185,11 +185,11 @@ def get_redis_backend():
     """Connect to redis from a string like CACHE_BACKEND."""
     # From django-redis-cache.
     _, server, params = parse_backend_uri(settings.REDIS_BACKEND)
-    db = params.pop('db', 1)
+    db = params.pop('db', 0)
     try:
         db = int(db)
     except (ValueError, TypeError):
-        db = 1
+        db = 0
     try:
         socket_timeout = float(params.pop('socket_timeout'))
     except (KeyError, ValueError):
