@@ -5,16 +5,13 @@ services:
 python:
   - "2.6"
   - "2.7"
-before_install:
-  - export PIP_USE_MIRRORS=true
-  - export PIP_INDEX_URL=https://simple.crate.io/
 install:
   - pip install -e .
-  - pip install -r requirements.txt Django==$DJANGO
+  - pip install -r requirements.txt "$DJANGO_SPEC"
 script:
   - fab test
 env:
-  - DJANGO=1.3.3
-  - DJANGO=1.4.1
-  - DJANGO=1.5
-  - DJANGO=1.6
+  - DJANGO_SPEC="Django>=1.4,<1.5"
+  - DJANGO_SPEC="Django>=1.5,<1.6"
+  - DJANGO_SPEC="Django>=1.6,<1.7"
+  - DJANGO_SPEC="https://www.djangoproject.com/download/1.7c1/tarball/"

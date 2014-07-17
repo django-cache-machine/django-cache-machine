@@ -5,7 +5,7 @@ import logging
 import socket
 
 from django.conf import settings
-from django.core.cache import cache as default_cache, get_cache, parse_backend_uri
+from django.core.cache import cache as default_cache, get_cache
 from django.core.cache.backends.base import InvalidCacheBackendError
 from django.utils import encoding, translation
 
@@ -181,15 +181,41 @@ class NullInvalidator(Invalidator):
         return
 
 
+def parse_backend_uri(backend_uri):
+    """
+    Converts the "backend_uri" into a host and any extra params that are
+    required for the backend. Returns a (host, params) tuple.
+    """
+    backend_uri_sliced = backend_uri.split('://')
+    if len(backend_uri_sliced) > 2:
+        raise InvalidCacheBackendError("Backend URI can't have more than one scheme://")
+    elif len(backend_uri_sliced) == 2:
+        rest = backend_uri_sliced[1]
+    else:
+        rest = backend_uri_sliced[0]
+
+    host = rest[2:]
+    qpos = rest.find('?')
+    if qpos != -1:
+        params = dict(parse_qsl(rest[qpos+1:]))
+        host = rest[2:qpos]
+    else:
+        params = {}
+    if host.endswith('/'):
+        host = host[:-1]
+
+    return host, params
+
+
 def get_redis_backend():
     """Connect to redis from a string like CACHE_BACKEND."""
     # From django-redis-cache.
-    _, server, params = parse_backend_uri(settings.REDIS_BACKEND)
-    db = params.pop('db', 1)
+    server, params = parse_backend_uri(settings.REDIS_BACKEND)
+    db = params.pop('db', 0)
     try:
         db = int(db)
     except (ValueError, TypeError):
-        db = 1
+        db = 0
     try:
         socket_timeout = float(params.pop('socket_timeout'))
     except (KeyError, ValueError):
