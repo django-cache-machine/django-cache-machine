@@ -6,6 +6,7 @@ automatically.
 """
 import functools
 import os
+import sys
 
 from fabric.api import local, cd, env
 from fabric.contrib.project import rsync_project
@@ -39,8 +40,14 @@ except Exception:
     print 'WARNING: Skipping redis tests.'
 
 def test():
+    if sys.version_info.major == 2 and sys.version_info.minor < 7:
+        import django
+        if django.VERSION[1] >= 7:
+            print("Skipping becuase Django >= 1.7 doesn't work with Python < 2.7")
+            return
+
     for settings in SETTINGS:
-        print settings
+        print(settings)
         os.environ['DJANGO_SETTINGS_MODULE'] = 'cache_machine.%s' % settings
         local('django-admin.py test')
 
