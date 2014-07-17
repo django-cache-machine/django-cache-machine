@@ -40,7 +40,7 @@ except Exception:
     print 'WARNING: Skipping redis tests.'
 
 def test():
-    if sys.version_info.major == 2 and sys.version_info.minor < 7:
+    if sys.version_info[0] == 2 and sys.version_info[1] < 7:
         import django
         if django.VERSION[1] >= 7:
             print("Skipping becuase Django >= 1.7 doesn't work with Python < 2.7")
