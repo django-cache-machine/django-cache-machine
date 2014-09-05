@@ -102,7 +102,7 @@ Here's what a minimal cached model looks like::
 
     from django.db import models
 
-    from caching.base imoprt CachingManager, CachingMixin
+    from caching.base import CachingManager, CachingMixin
 
     class Zomg(CachingMixin, models.Model):
         val = models.IntegerField()
