@@ -32,7 +32,7 @@ class CachingManager(models.Manager):
     # Tell Django to use this manager when resolving foreign keys.
     use_for_related_fields = True
 
-    def get_query_set(self):
+    def get_queryset(self):
         return CachingQuerySet(self.model, using=self._db)
 
     def contribute_to_class(self, cls, name):
@@ -56,7 +56,7 @@ class CachingManager(models.Manager):
                                   using=self._db, *args, **kwargs)
 
     def cache(self, timeout=DEFAULT_TIMEOUT):
-        return self.get_query_set().cache(timeout)
+        return self.get_queryset().cache(timeout)
 
     def no_cache(self):
         return self.cache(NO_CACHE)
