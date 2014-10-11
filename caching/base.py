@@ -1,6 +1,7 @@
 import functools
 import logging
 
+import django
 from django.conf import settings
 from django.db import models
 from django.db.models import signals
@@ -34,6 +35,9 @@ class CachingManager(models.Manager):
 
     def get_queryset(self):
         return CachingQuerySet(self.model, using=self._db)
+
+    if django.VERSION < (1, 6):
+        get_query_set = get_queryset
 
     def contribute_to_class(self, cls, name):
         signals.post_save.connect(self.post_save, sender=cls)
