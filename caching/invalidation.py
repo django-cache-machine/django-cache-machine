@@ -3,6 +3,7 @@ import functools
 import hashlib
 import logging
 import socket
+import urlparse
 
 from django.conf import settings
 from django.core.cache import cache as default_cache
@@ -200,7 +201,7 @@ def parse_backend_uri(backend_uri):
     host = rest[2:]
     qpos = rest.find('?')
     if qpos != -1:
-        params = dict(parse_qsl(rest[qpos+1:]))
+        params = dict(urlparse.parse_qsl(rest[qpos+1:]))
         host = rest[2:qpos]
     else:
         params = {}
