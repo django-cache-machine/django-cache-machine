@@ -95,7 +95,7 @@ that class and inherit from the :class:`~caching.base.CachingMixin`.  If you
 want related lookups (foreign keys) to hit the cache, ``CachingManager`` must
 be the default manager.  If you have multiple managers that should be cached,
 return a :class:`~caching.base.CachingQuerySet` from the other manager's
-``get_query_set`` method instead of subclassing ``CachingManager``, since that
+``get_queryset`` method instead of subclassing ``CachingManager``, since that
 would hook up the post_save and post_delete signals multiple times.
 
 Here's what a minimal cached model looks like::
