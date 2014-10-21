@@ -5,9 +5,11 @@ import logging
 import socket
 
 from django.conf import settings
-from django.core.cache import cache as default_cache, get_cache
+from django.core.cache import cache as default_cache
+from django.core.cache import get_cache
 from django.core.cache.backends.base import InvalidCacheBackendError
 from django.utils import encoding, translation
+from django.utils.six.moves.urllib.parse import parse_qsl
 
 try:
     import redis as redislib
@@ -188,7 +190,8 @@ def parse_backend_uri(backend_uri):
     """
     backend_uri_sliced = backend_uri.split('://')
     if len(backend_uri_sliced) > 2:
-        raise InvalidCacheBackendError("Backend URI can't have more than one scheme://")
+        raise InvalidCacheBackendError(
+            "Backend URI can't have more than one scheme://")
     elif len(backend_uri_sliced) == 2:
         rest = backend_uri_sliced[1]
     else:
