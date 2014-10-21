@@ -1,6 +1,7 @@
 import functools
 import logging
 
+from django.contrib.contenttypes import generic
 from django.conf import settings
 from django.db import models
 from django.db.models import signals
@@ -251,6 +252,15 @@ class CachingMixin(object):
 
         keys = [fk.rel.to._cache_key(val, self._state.db) for fk, val in fks.items()
                 if val is not None and hasattr(fk.rel.to, '_cache_key')]
+
+        generics = [f for f in self._meta.virtual_fields
+                    if isinstance(f, generic.GenericForeignKey) and
+                    getattr(self, f.ct_field) and
+                    hasattr(getattr(self, f.ct_field).model_class(), '_cache_key')]
+        if generics:
+            keys = keys + [getattr(self, f.ct_field).model_class()._cache_key(getattr(self, f.fk_field), self._state.db)
+                           for f in generics]
+
         return (self.cache_key,) + tuple(keys)
 
 
