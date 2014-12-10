@@ -136,6 +136,11 @@ class CachingQuerySet(models.query.QuerySet):
         super(CachingQuerySet, self).__init__(*args, **kw)
         self.timeout = DEFAULT_TIMEOUT
 
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if type(self.timeout) == object:
+            self.timeout = DEFAULT_TIMEOUT
+
     def flush_key(self):
         return flush_key(self.query_key())
 
