@@ -455,6 +455,11 @@ class CachingTestCase(TestCase):
         Addon.objects.create(val=17, author1=u, author2=u)
         eq_([a.val for a in u.addon_set.all()], [42, 17])
 
+    def test_invalidate_new_object_2(self):
+        eq_([a.name for a in User.objects.all()], ['fliggy', 'clouseroo'])
+        User.objects.create(name='spam')
+        eq_([a.name for a in User.objects.all()], ['fliggy', 'clouseroo', 'spam'])
+
     def test_make_key_unicode(self):
         translation.activate(u'en-US')
         f = 'fragment\xe9\x9b\xbb\xe8\x85\xa6\xe7\x8e'
