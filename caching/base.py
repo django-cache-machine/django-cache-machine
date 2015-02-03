@@ -9,7 +9,7 @@ from django.db.models.sql import query, EmptyResultSet
 from django.utils import encoding
 
 from .compat import DEFAULT_TIMEOUT, FOREVER
-from .invalidation import invalidator, flush_key, make_key, byid, cache
+from .invalidation import invalidator, flush_key, make_key, byid, cache, flush_key_model
 
 
 class NullHandler(logging.Handler):
@@ -53,6 +53,7 @@ class CachingManager(models.Manager):
     def invalidate(self, *objects):
         """Invalidate all the flush lists associated with ``objects``."""
         keys = [k for o in objects for k in o._cache_keys()]
+        keys.append(get_model_name(self.model.__name__))
         invalidator.invalidate_keys(keys)
 
     def raw(self, raw_query, params=None, *args, **kwargs):
@@ -74,11 +75,12 @@ class CacheMachine(object):
     called to get an iterator over some database results.
     """
 
-    def __init__(self, query_string, iter_function, timeout=DEFAULT_TIMEOUT, db='default'):
+    def __init__(self, query_string, iter_function, timeout=DEFAULT_TIMEOUT, db='default', model_name=None):
         self.query_string = query_string
         self.iter_function = iter_function
         self.timeout = timeout
         self.db = db
+        self.model_name = model_name
 
     def query_key(self):
         """
@@ -126,8 +128,9 @@ class CacheMachine(object):
         """Cache query_key => objects, then update the flush lists."""
         query_key = self.query_key()
         query_flush = flush_key(self.query_string)
+        model_flush = flush_key_model(get_model_name(self.model_name))
         cache.add(query_key, objects, timeout=self.timeout)
-        invalidator.cache_objects(objects, query_key, query_flush)
+        invalidator.cache_objects(objects, query_key, query_flush, model_flush=model_flush)
 
 
 class CachingQuerySet(models.query.QuerySet):
@@ -156,7 +159,7 @@ class CachingQuerySet(models.query.QuerySet):
                 return iterator()
             if FETCH_BY_ID:
                 iterator = self.fetch_by_id
-            return iter(CacheMachine(query_string, iterator, self.timeout, db=self.db))
+            return iter(CacheMachine(query_string, iterator, self.timeout, db=self.db, model_name=self.model.__name__))
 
     def fetch_by_id(self):
         """
@@ -255,6 +258,7 @@ class CachingMixin(object):
 
         keys = [fk.rel.to._cache_key(val, self._state.db) for fk, val in fks.items()
                 if val is not None and hasattr(fk.rel.to, '_cache_key')]
+
         return (self.cache_key,) + tuple(keys)
 
 
@@ -273,7 +277,7 @@ class CachingRawQuerySet(models.query.RawQuerySet):
                 yield iterator.next()
         else:
             sql = self.raw_query % tuple(self.params)
-            for obj in CacheMachine(sql, iterator, timeout=self.timeout):
+            for obj in CacheMachine(sql, iterator, timeout=self.timeout, model_name=self.model.__name__):
                 yield obj
             raise StopIteration
 
@@ -310,6 +314,10 @@ def cached_with(obj, f, f_key, timeout=DEFAULT_TIMEOUT):
     invalidator.add_to_flush_list(
         {obj.flush_key(): [_function_cache_key(key)]})
     return cached(f, key, timeout)
+
+
+def get_model_name(model_name):
+    return 'model:' + model_name
 
 
 class cached_method(object):
