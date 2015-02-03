@@ -25,6 +25,7 @@ except (InvalidCacheBackendError, ValueError):
 
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 FETCH_BY_ID = getattr(settings, 'FETCH_BY_ID', False)
+FLUSH_BY_MODEL = getattr(settings, 'FLUSH_BY_MODEL', False)
 FLUSH = CACHE_PREFIX + ':flush:'
 
 log = logging.getLogger('caching.invalidation')
@@ -41,6 +42,12 @@ def make_key(k, with_locale=True):
 
 
 def flush_key(obj):
+    """We put flush lists in the flush: namespace."""
+    key = obj if isinstance(obj, basestring) else obj.cache_key
+    return FLUSH + make_key(key, with_locale=False)
+
+
+def flush_key_model(obj):
     """We put flush lists in the flush: namespace."""
     key = obj if isinstance(obj, basestring) else obj.cache_key
     return FLUSH + make_key(key, with_locale=False)
@@ -86,7 +93,7 @@ class Invalidator(object):
         if flush_keys:
             self.clear_flush_lists(flush_keys)
 
-    def cache_objects(self, objects, query_key, query_flush):
+    def cache_objects(self, objects, query_key, query_flush, model_flush=None):
         # Add this query to the flush list of each object.  We include
         # query_flush so that other things can be cached against the queryset
         # and still participate in invalidation.
@@ -96,6 +103,9 @@ class Invalidator(object):
         for key in flush_keys:
             flush_lists[key].add(query_flush)
         flush_lists[query_flush].add(query_key)
+
+        if model_flush:
+            flush_lists[model_flush].add(query_flush)
 
         # Add each object to the flush lists of its foreign keys.
         for obj in objects:
@@ -197,7 +207,7 @@ def parse_backend_uri(backend_uri):
     else:
         rest = backend_uri_sliced[0]
 
-    host = rest
+    host = rest#[2:]
     qpos = rest.find('?')
     if qpos != -1:
         params = dict(parse_qsl(rest[qpos+1:]))
