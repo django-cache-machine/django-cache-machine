@@ -7,8 +7,8 @@ through the ORM.
 
 For full docs, see https://cache-machine.readthedocs.org/en/latest/.
 
-.. image:: https://travis-ci.org/jbalogh/django-cache-machine.png
-  :target: https://travis-ci.org/jbalogh/django-cache-machine
+.. image:: https://travis-ci.org/asketsus/django-cache-machine.png
+  :target: https://travis-ci.org/asketsus/django-cache-machine
 
 
 Requirements
