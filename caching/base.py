@@ -277,7 +277,7 @@ class CachingRawQuerySet(models.query.RawQuerySet):
                 yield iterator.next()
         else:
             sql = self.raw_query % tuple(self.params)
-            for obj in CacheMachine(sql, iterator, timeout=self.timeout):
+            for obj in CacheMachine(sql, iterator, timeout=self.timeout, model_name=self.model.__name__):
                 yield obj
             raise StopIteration
 
