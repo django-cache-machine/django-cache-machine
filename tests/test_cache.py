@@ -494,8 +494,8 @@ class CachingTestCase(TestCase):
         user2.save()
 
         users = User.objects.filter(name__icontains='Jo')
-        assert users.len == 1
+        assert users.count() == 1
         user2.name = 'Joseph'
         user2.save()
         users = User.objects.filter(name__icontains='Jo')
-        assert users.len == 2
+        assert users.count() == 2
