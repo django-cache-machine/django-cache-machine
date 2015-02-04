@@ -488,9 +488,9 @@ class CachingTestCase(TestCase):
             assert from_slave._state.db == 'slave'
 
     def test_update_after_put(self):
-        user1 = User(name='John')
+        user1 = User.objects.create(name='John')
         user1.save()
-        user2 = User(name='Matt')
+        user2 = User.objects.create(name='Matt')
         user2.save()
 
         users = User.objects.filter(name__icontains='Jo')
