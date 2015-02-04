@@ -494,11 +494,11 @@ class CachingTestCase(TestCase):
         user2.save()
 
         users = User.objects.filter(name__icontains='Jo')
-        assert users.count() == 1
+        first_count = users.count()
         user2.name = 'Joseph'
         user2.save()
         users = User.objects.filter(name__icontains='Jo')
-        assert users.count() == 2
+        assert users.count() == (first_count + 1)
 
     def test_update_after_post(self):
         user1 = User.objects.create(name='Tom')
@@ -510,3 +510,12 @@ class CachingTestCase(TestCase):
         user2.save()
         users = User.objects.all()
         assert users.count() == (initial_count+1)
+
+    def test_update_after_delete(self):
+        users_list = User.objects.all()
+        initial_count = users_list.count()
+
+        first_user = users_list[0]
+        first_user.delete()
+
+        assert (initial_count+1) == User.objects.all().count()
