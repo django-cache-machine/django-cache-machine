@@ -501,12 +501,12 @@ class CachingTestCase(TestCase):
         assert users.count() == 2
 
     def test_update_after_post(self):
-        user1 = User.objects.create(name='John')
+        user1 = User.objects.create(name='Tom')
         user1.save()
         users = User.objects.all()
-        assert users.count() == 1
+        initial_count = users.count()
 
-        user2 = User.objects.create(name='Matt')
+        user2 = User.objects.create(name='Jerry')
         user2.save()
         users = User.objects.all()
-        assert users.count() == 2
+        assert users.count() == (initial_count+1)
