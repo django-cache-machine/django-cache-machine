@@ -486,3 +486,16 @@ class CachingTestCase(TestCase):
             from_slave = Addon.objects.using('slave').get(id=1)
             assert from_slave.from_cache is False
             assert from_slave._state.db == 'slave'
+
+    def test_update_after_put(self):
+        user1 = User(name='John')
+        user1.save()
+        user2 = User(name='Matt')
+        user2.save()
+
+        users = User.objects.filter(name__icontains='Jo')
+        assert users.len == 1
+        user2.name = 'Joseph'
+        user2.save()
+        users = User.objects.filter(name__icontains='Jo')
+        assert users.len == 2
