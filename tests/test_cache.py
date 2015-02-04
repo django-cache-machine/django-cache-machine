@@ -499,3 +499,14 @@ class CachingTestCase(TestCase):
         user2.save()
         users = User.objects.filter(name__icontains='Jo')
         assert users.count() == 2
+
+    def test_update_after_post(self):
+        user1 = User.objects.create(name='John')
+        user1.save()
+        users = User.objects.all()
+        assert users.count() == 1
+
+        user2 = User.objects.create(name='Matt')
+        user2.save()
+        users = User.objects.all()
+        assert users.count() == 2
