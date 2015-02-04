@@ -518,4 +518,4 @@ class CachingTestCase(TestCase):
         first_user = users_list[0]
         first_user.delete()
 
-        assert (initial_count+1) == User.objects.all().count()
+        assert (initial_count-1) == User.objects.all().count()
