@@ -15,7 +15,7 @@ Original Version
 =============
 
 This cache machine is a fork from https://github.com/jbalogh/django-cache-machine/. It has been reimplemented
-to invalidate queryset after any change in his related model.
+to invalidate queryset after any change in its related model.
 
 This solve a set of problems after do a POST/PUT operation, where Query sets were not invalidated although
 they had new rows.
