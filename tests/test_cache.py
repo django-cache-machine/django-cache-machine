@@ -486,3 +486,39 @@ class CachingTestCase(TestCase):
             from_slave = Addon.objects.using('slave').get(id=1)
             assert from_slave.from_cache is False
             assert from_slave._state.db == 'slave'
+
+    def test_update_after_put(self):
+        """ Test invalidation after do a put and insert in a previous cached filter """
+        user1 = User.objects.create(name='John')
+        user1.save()
+        user2 = User.objects.create(name='Matt')
+        user2.save()
+
+        users = User.objects.filter(name__icontains='Jo')
+        first_count = users.count()
+        user2.name = 'Joseph'
+        user2.save()
+        users = User.objects.filter(name__icontains='Jo')
+        assert users.count() == (first_count + 1)
+
+    def test_update_after_post(self):
+        """ Test invalidation after do a post and get again a list of a model """
+        user1 = User.objects.create(name='Tom')
+        user1.save()
+        users = User.objects.all()
+        initial_count = users.count()
+
+        user2 = User.objects.create(name='Jerry')
+        user2.save()
+        users = User.objects.all()
+        assert users.count() == (initial_count+1)
+
+    def test_update_after_delete(self):
+        """ Test invalidation after do a delete and get again a list of a model """
+        users_list = User.objects.all()
+        initial_count = users_list.count()
+
+        first_user = users_list[0]
+        first_user.delete()
+
+        assert (initial_count-1) == User.objects.all().count()
