@@ -29,7 +29,7 @@ Get it from `pypi <http://pypi.python.org/pypi/django-cache-machine>`_::
 
 or `github <http://github.com/jbalogh/django-cache-machine>`_::
 
-    pip install -e git://github.com/jbalogh/django-cache-machine.git#egg=django-cache-machine
+    pip install git+git://github.com/jbalogh/django-cache-machine.git#egg=django-cache-machine
 
 
 Running Tests
