@@ -6,7 +6,7 @@ import socket
 
 from django.conf import settings
 from django.core.cache import cache as default_cache
-from django.core.cache import get_cache
+from django.core.cache import caches
 from django.core.cache.backends.base import InvalidCacheBackendError
 from django.utils import encoding, translation
 from django.utils.six.moves.urllib.parse import parse_qsl
@@ -18,7 +18,7 @@ except ImportError:
 
 # Look for an own cache first before falling back to the default cache
 try:
-    cache = get_cache('cache_machine')
+    cache = caches['cache_machine']
 except (InvalidCacheBackendError, ValueError):
     cache = default_cache
 
