@@ -113,7 +113,7 @@ class CacheMachine(object):
         to_cache = []
         try:
             while True:
-                obj = iterator.next()
+                obj = next(iterator)
                 obj.from_cache = False
                 to_cache.append(obj)
                 yield obj
@@ -246,12 +246,12 @@ class CachingMixin(object):
         For the Addon class, with a pk of 2, we get "o:addons.addon:2".
         """
         key_parts = ('o', cls._meta, pk, db)
-        return ':'.join(map(encoding.smart_unicode, key_parts))
+        return ':'.join(map(encoding.smart_text, key_parts))
 
     def _cache_keys(self):
         """Return the cache key for self plus all related foreign keys."""
         fks = dict((f, getattr(self, f.attname)) for f in self._meta.fields
-                    if isinstance(f, models.ForeignKey))
+                   if isinstance(f, models.ForeignKey))
 
         keys = [fk.rel.to._cache_key(val, self._state.db) for fk, val in fks.items()
                 if val is not None and hasattr(fk.rel.to, '_cache_key')]
@@ -270,7 +270,7 @@ class CachingRawQuerySet(models.query.RawQuerySet):
         if self.timeout == NO_CACHE:
             iterator = iterator()
             while True:
-                yield iterator.next()
+                yield next(iterator)
         else:
             sql = self.raw_query % tuple(self.params)
             for obj in CacheMachine(sql, iterator, timeout=self.timeout):
@@ -356,7 +356,7 @@ class MethodWrapper(object):
         kwarg_keys = [(key, k(val)) for key, val in kwargs.items()]
         key_parts = ('m', self.obj.cache_key, self.func.__name__,
                      arg_keys, kwarg_keys)
-        key = ':'.join(map(encoding.smart_unicode, key_parts))
+        key = ':'.join(map(encoding.smart_text, key_parts))
         if key not in self.cache:
             f = functools.partial(self.func, self.obj, *args, **kwargs)
             self.cache[key] = cached_with(self.obj, f, key)

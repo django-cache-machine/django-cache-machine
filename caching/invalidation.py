@@ -3,6 +3,16 @@ import functools
 import hashlib
 import logging
 import socket
+try:
+    unicode = unicode
+except NameError:  # 'unicode' is undefined => Python 3
+    unicode = str
+    bytes = bytes
+    basestring = (str, bytes)
+else:  # 'unicode' exists => Python 2
+    unicode = unicode
+    bytes = str
+    basestring = basestring
 
 from django.conf import settings
 from django.core.cache import cache as default_cache
@@ -37,7 +47,7 @@ def make_key(k, with_locale=True):
         key += encoding.smart_str(translation.get_language())
     # memcached keys must be < 250 bytes and w/o whitespace, but it's nice
     # to see the keys when using locmem.
-    return hashlib.md5(key).hexdigest()
+    return hashlib.md5(key.encode('utf-8')).hexdigest()
 
 
 def flush_key(obj):
@@ -62,7 +72,7 @@ def safe_redis(return_type):
         def wrapper(*args, **kw):
             try:
                 return f(*args, **kw)
-            except (socket.error, redislib.RedisError), e:
+            except (socket.error, redislib.RedisError) as e:
                 log.error('redis error: %s' % e)
                 # log.error('%r\n%r : %r' % (f.__name__, args[1:], kw))
                 if hasattr(return_type, '__call__'):
@@ -170,7 +180,7 @@ class RedisInvalidator(Invalidator):
 
     @safe_redis(set)
     def get_flush_lists(self, keys):
-        return redis.sunion(map(self.safe_key, keys))
+        return map(encoding.smart_text, redis.sunion(map(self.safe_key, keys)))
 
     @safe_redis(None)
     def clear_flush_lists(self, keys):
