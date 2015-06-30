@@ -14,15 +14,8 @@ class InfinityMixin(object):
         return super(InfinityMixin, self).set(key, value, timeout, version)
 
 
-if django.VERSION[:2] >= (1, 3):
-    class MemcachedCache(InfinityMixin, memcached.MemcachedCache):
-        pass
+class MemcachedCache(InfinityMixin, memcached.MemcachedCache):
+    pass
 
-    class PyLibMCCache(InfinityMixin, memcached.PyLibMCCache):
-        pass
-
-    class CacheClass(MemcachedCache):
-        pass
-else:
-    class CacheClass(InfinityMixin, memcached.CacheClass):
-        pass
+class PyLibMCCache(InfinityMixin, memcached.PyLibMCCache):
+    pass

@@ -15,3 +15,4 @@ env:
   - DJANGO_SPEC="Django>=1.5,<1.6"
   - DJANGO_SPEC="Django>=1.6,<1.7"
   - DJANGO_SPEC="Django>=1.7,<1.8"
+  - DJANGO_SPEC="Django>=1.8,<1.9"
