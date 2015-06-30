@@ -37,7 +37,7 @@ class InfinityMixin(object):
         return super(InfinityMixin, self).set(key, value, timeout, version)
 
 
-class CacheClass(InfinityMixin, locmem.CacheClass):
+class CacheClass(InfinityMixin, locmem.LocMemCache):
     pass
 
 
