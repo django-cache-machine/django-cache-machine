@@ -44,4 +44,4 @@ Get it from `github <http://github.com/django-cache-machine/django-cache-machine
     git clone git://github.com/django-cache-machine/django-cache-machine.git
     cd django-cache-machine
     pip install -r requirements.txt
-    fab test
+    python run_tests.py
