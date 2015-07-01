@@ -2,6 +2,6 @@ from settings import *
 
 CACHES = {
     'default': {
-        'BACKEND': 'caching.backends.locmem.CacheClass',
+        'BACKEND': 'caching.backends.locmem.LocMemCache',
     },
 }

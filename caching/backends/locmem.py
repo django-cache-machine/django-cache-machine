@@ -37,10 +37,5 @@ class InfinityMixin(object):
         return super(InfinityMixin, self).set(key, value, timeout, version)
 
 
-class CacheClass(InfinityMixin, locmem.CacheClass):
+class LocMemCache(InfinityMixin, locmem.LocMemCache):
     pass
-
-
-if django.VERSION[:2] >= (1, 3):
-    class LocMemCache(InfinityMixin, locmem.LocMemCache):
-        pass
