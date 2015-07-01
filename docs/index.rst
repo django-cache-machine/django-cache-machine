@@ -6,7 +6,7 @@ Cache Machine
 
 Cache Machine provides automatic caching and invalidation for Django models
 through the ORM.  The code is hosted on
-`github <http://github.com/jbalogh/django-cache-machine>`_.
+`github <http://github.com/django-cache-machine/django-cache-machine>`_.
 
 Settings
 --------

@@ -9,8 +9,8 @@ through the ORM.
 
 For full docs, see https://cache-machine.readthedocs.org/en/latest/.
 
-.. image:: https://travis-ci.org/jbalogh/django-cache-machine.png
-  :target: https://travis-ci.org/jbalogh/django-cache-machine
+.. image:: https://travis-ci.org/django-cache-machine/django-cache-machine.png
+  :target: https://travis-ci.org/django-cache-machine/django-cache-machine
 
 
 Requirements
@@ -27,18 +27,18 @@ Get it from `pypi <http://pypi.python.org/pypi/django-cache-machine>`_::
 
     pip install django-cache-machine
 
-or `github <http://github.com/jbalogh/django-cache-machine>`_::
+or `github <http://github.com/django-cache-machine/django-cache-machine>`_::
 
-    pip install -e git://github.com/jbalogh/django-cache-machine.git#egg=django-cache-machine
+    pip install -e git://github.com/django-cache-machine/django-cache-machine.git#egg=django-cache-machine
 
 
 Running Tests
 -------------
 
 
-Get it from `github <http://github.com/jbalogh/django-cache-machine>`_::
+Get it from `github <http://github.com/django-cache-machine/django-cache-machine>`_::
 
-    git clone git://github.com/jbalogh/django-cache-machine.git
+    git clone git://github.com/django-cache-machine/django-cache-machine.git
     cd django-cache-machine
     pip install -r requirements.txt
     fab test

@@ -11,7 +11,7 @@ setup(
     long_description=open('README.rst').read(),
     author='Jeff Balogh',
     author_email='jbalogh@mozilla.com',
-    url='http://github.com/jbalogh/django-cache-machine',
+    url='http://github.com/django-cache-machine/django-cache-machine',
     license='BSD',
     packages=['caching', 'caching.backends'],
     include_package_data=True,
