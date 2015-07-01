@@ -202,11 +202,11 @@ def parse_backend_uri(backend_uri):
     else:
         rest = backend_uri_sliced[0]
 
-    host = rest[2:]
+    host = rest
     qpos = rest.find('?')
     if qpos != -1:
         params = dict(parse_qsl(rest[qpos+1:]))
-        host = rest[2:qpos]
+        host = rest[:qpos]
     else:
         params = {}
     if host.endswith('/'):
