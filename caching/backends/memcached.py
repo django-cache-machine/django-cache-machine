@@ -1,4 +1,3 @@
-import django
 from django.core.cache.backends import memcached
 
 from caching.compat import DEFAULT_TIMEOUT
@@ -16,6 +15,7 @@ class InfinityMixin(object):
 
 class MemcachedCache(InfinityMixin, memcached.MemcachedCache):
     pass
+
 
 class PyLibMCCache(InfinityMixin, memcached.PyLibMCCache):
     pass

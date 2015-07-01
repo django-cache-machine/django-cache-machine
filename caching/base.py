@@ -8,7 +8,7 @@ from django.db.models import signals
 from django.db.models.sql import query, EmptyResultSet
 from django.utils import encoding
 
-from .compat import DEFAULT_TIMEOUT, FOREVER
+from .compat import DEFAULT_TIMEOUT
 from .invalidation import invalidator, flush_key, make_key, byid, cache
 
 
@@ -251,7 +251,7 @@ class CachingMixin(object):
     def _cache_keys(self):
         """Return the cache key for self plus all related foreign keys."""
         fks = dict((f, getattr(self, f.attname)) for f in self._meta.fields
-                    if isinstance(f, models.ForeignKey))
+                   if isinstance(f, models.ForeignKey))
 
         keys = [fk.rel.to._cache_key(val, self._state.db) for fk, val in fks.items()
                 if val is not None and hasattr(fk.rel.to, '_cache_key')]
