@@ -8,16 +8,18 @@ python:
 install:
   - pip install -e .
   - pip install -r requirements.txt "$DJANGO_SPEC"
+  - pip install coveralls
 script:
-  - fab test
+  - python run_tests.py
   - flake8 .
+after_success:
+  - coveralls
 env:
   - DJANGO_SPEC="Django>=1.4,<1.5"
   - DJANGO_SPEC="Django>=1.5,<1.6"
   - DJANGO_SPEC="Django>=1.6,<1.7"
   - DJANGO_SPEC="Django>=1.7,<1.8"
   - DJANGO_SPEC="Django>=1.8,<1.9"
-
 matrix:
   exclude:
     - python: "2.6"
