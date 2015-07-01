@@ -7,7 +7,14 @@ automatically.
 import os
 import sys
 
-from subprocess import call, check_output
+from subprocess import call
+try:
+    from subprocess import check_output
+except ImportError:
+    # Python 2.6 doesn't have check_output. Note this will not raise a CalledProcessError
+    # like check_output does, but it should work for our purposes.
+    import subprocess
+    check_output = lambda x: subprocess.Popen(x, stdout=subprocess.PIPE).communicate()[0]
 
 NAME = os.path.basename(os.path.dirname(__file__))
 ROOT = os.path.abspath(os.path.dirname(__file__))
