@@ -7,3 +7,4 @@ fabric
 jinja2
 redis
 flake8
+coverage
