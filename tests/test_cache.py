@@ -179,7 +179,7 @@ class CachingTestCase(TestCase):
         cache_mock.get.return_value = None
 
         q = Addon.objects.all()
-        count = q.count()
+        q.count()
 
         args, kwargs = cache_mock.set.call_args
         key, value, timeout = args
@@ -211,6 +211,7 @@ class CachingTestCase(TestCase):
 
     def test_jinja_cache_tag_queryset(self):
         env = jinja2.Environment(extensions=['caching.ext.cache'])
+
         def check(q, expected):
             t = env.from_string(
                 "{% cache q %}{% for x in q %}{{ x.id }}:{{ x.val }};"
@@ -231,7 +232,7 @@ class CachingTestCase(TestCase):
         a.save()
 
         q = Addon.objects.all()
-        flush = cache.get(q.flush_key())
+        cache.get(q.flush_key())
         assert cache.get(q.flush_key()) is None
 
         check(Addon.objects.all(), '1:17;2:42;')
@@ -293,6 +294,7 @@ class CachingTestCase(TestCase):
 
     def test_cached_with(self):
         counter = mock.Mock()
+
         def expensive():
             counter()
             return counter.call_count
@@ -332,6 +334,7 @@ class CachingTestCase(TestCase):
     def test_cached_with_bad_object(self):
         """cached_with shouldn't fail if the object is missing a cache key."""
         counter = mock.Mock()
+
         def f():
             counter()
             return counter.call_count
