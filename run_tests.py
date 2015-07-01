@@ -33,10 +33,10 @@ def main():
         os.environ['DJANGO_SETTINGS_MODULE'] = 'cache_machine.%s' % settings
         # append to the existing coverage data for all but the first run
         if i > 0:
-            coverage_cmd = ['coverage', 'run', '--append', django_admin, 'test']
+            test_cmd = ['coverage', 'run', '--append', django_admin, 'test']
         else:
-            coverage_cmd = ['coverage', 'run', django_admin, 'test']
-        results.append(call(coverage_cmd))
+            test_cmd = ['coverage', 'run', django_admin, 'test']
+        results.append(call(test_cmd))
         results.append(call(['coverage', 'report', '-m', '--fail-under', '70']))
     sys.exit(any(results) and 1 or 0)
 
