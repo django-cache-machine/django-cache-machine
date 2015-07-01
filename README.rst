@@ -12,6 +12,9 @@ For full docs, see https://cache-machine.readthedocs.org/en/latest/.
 .. image:: https://travis-ci.org/django-cache-machine/django-cache-machine.png
   :target: https://travis-ci.org/django-cache-machine/django-cache-machine
 
+.. image:: https://coveralls.io/repos/django-cache-machine/django-cache-machine/badge.svg
+  :target: https://coveralls.io/r/django-cache-machine/django-cache-machine
+
 
 Requirements
 ------------
