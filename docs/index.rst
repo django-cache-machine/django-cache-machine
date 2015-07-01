@@ -32,12 +32,12 @@ With Django 1.4 or higher, you should use the ``CACHES`` setting::
                 'server-1:11211',
                 'server-2:11211',
             ],
-            'PREFIX': 'weee:',
+            'KEY_PREFIX': 'weee:',
         },
     }
 
 Note that we have to specify the class, not the module, for the ``BACKEND``
-property, and that the ``PREFIX`` is optional. The ``LOCATION`` may be a
+property, and that the ``KEY_PREFIX`` is optional. The ``LOCATION`` may be a
 string, instead of a list, if you only have one server.
 
 If you require the default cache backend to be a different type of
@@ -56,7 +56,7 @@ options simply define a separate ``cache_machine`` entry for the
                 'server-1:11211',
                 'server-2:11211',
             ],
-            'PREFIX': 'weee:',
+            'KEY_PREFIX': 'weee:',
         },
     }
 
