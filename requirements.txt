@@ -3,7 +3,6 @@ sphinx
 mock
 django-nose
 python-memcached
-fabric
 jinja2
 redis
 flake8
