@@ -489,3 +489,11 @@ class CachingTestCase(TestCase):
             from_slave = Addon.objects.using('slave').get(id=1)
             assert from_slave.from_cache is False
             assert from_slave._state.db == 'slave'
+
+    def test_parse_backend_uri(self):
+        """ Test that parse_backend_uri works as intended. Regression for #92. """
+        from caching.invalidation import parse_backend_uri
+        uri = 'redis://127.0.0.1:6379?socket_timeout=5'
+        host, params = parse_backend_uri(uri)
+        self.assertEqual(host, '127.0.0.1:6379')
+        self.assertEqual(params, {'socket_timeout': '5'})
