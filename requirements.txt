@@ -6,3 +6,4 @@ python-memcached
 fabric
 jinja2
 redis
+flake8
