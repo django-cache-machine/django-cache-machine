@@ -7,6 +7,13 @@ import jinja2
 import mock
 from nose.tools import eq_
 
+# debugging Travis import failures
+import os
+import sys
+sys.stderr.write(str(os.environ['PYTHONPATH'].split(os.pathsep)) + '\n\n')
+from .testapp.models import Addon, User
+import caching
+
 from caching import base, invalidation
 from caching.compat import u
 
