@@ -434,6 +434,10 @@ class CachingTestCase(TestCase):
         # Raised an exception before fixing #2.
         eq_([], list(User.objects.filter(pk__in=[])))
 
+    def test_empty_in_count(self):
+        # Regression test for #14.
+        eq_(0, User.objects.filter(pk__in=[]).count())
+
     def test_empty_queryset(self):
         for k in (1, 1):
             with self.assertNumQueries(k):
