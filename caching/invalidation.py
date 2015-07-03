@@ -32,19 +32,19 @@ except (InvalidCacheBackendError, ValueError):
 
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 FETCH_BY_ID = getattr(settings, 'FETCH_BY_ID', False)
-FLUSH = encoding.smart_bytes(CACHE_PREFIX + ':flush:')
+FLUSH = CACHE_PREFIX + ':flush:'
 
 log = logging.getLogger('caching.invalidation')
 
 
 def make_key(k, with_locale=True):
     """Generate the full key for ``k``, with a prefix."""
-    key = encoding.smart_bytes(':'.join((CACHE_PREFIX, k)))
+    key = '%s:%s' % (CACHE_PREFIX, encoding.smart_text(k))
     if with_locale:
-        key += encoding.smart_bytes(translation.get_language())
+        key += encoding.smart_text(translation.get_language())
     # memcached keys must be < 250 bytes and w/o whitespace, but it's nice
     # to see the keys when using locmem.
-    return encoding.smart_bytes(hashlib.md5(key).hexdigest())
+    return hashlib.md5(encoding.smart_bytes(key)).hexdigest()
 
 
 def flush_key(obj):
@@ -161,7 +161,7 @@ class Invalidator(object):
 class RedisInvalidator(Invalidator):
 
     def safe_key(self, key):
-        if b' ' in key or b'\n' in key:
+        if ' ' in key or '\n' in key:
             log.warning('BAD KEY: "%s"' % key)
             return ''
         return key
@@ -172,12 +172,13 @@ class RedisInvalidator(Invalidator):
         pipe = redis.pipeline(transaction=False)
         for key, list_ in list(mapping.items()):
             for query_key in list_:
-                pipe.sadd(self.safe_key(key), query_key)
+                pipe.sadd(self.safe_key(key), query_key.encode('utf-8'))
         pipe.execute()
 
     @safe_redis(set)
     def get_flush_lists(self, keys):
-        return redis.sunion(list(map(self.safe_key, keys)))
+        flush_list = redis.sunion(list(map(self.safe_key, keys)))
+        return [k.decode('utf-8') for k in flush_list]
 
     @safe_redis(None)
     def clear_flush_lists(self, keys):
