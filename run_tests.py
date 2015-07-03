@@ -34,7 +34,9 @@ SETTINGS = (
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='Run the tests for django-cache-machine. '
+                                     'If no options are specified, tests will be run with '
+                                     'all settings files and without coverage.py.')
     parser.add_argument('--with-coverage', action='store_true',
                         help='Run tests with coverage.py and display coverage report')
     parser.add_argument('--settings', choices=SETTINGS,
