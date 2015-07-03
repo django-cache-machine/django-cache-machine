@@ -2,8 +2,6 @@
 Cache Machine
 =============
 
-`This project needs a maintainer. <https://github.com/django-cache-machine/django-cache-machine/issues/91>`_
-
 Cache Machine provides automatic caching and invalidation for Django models
 through the ORM.
 
