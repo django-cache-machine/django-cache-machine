@@ -1,11 +1,7 @@
 from setuptools import setup
 
-import sys
 import caching
 
-extra = {}
-if sys.version_info >= (3,):
-    extra['use_2to3'] = True
 
 setup(
     name='django-cache-machine',
@@ -31,6 +27,5 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Topic :: Software Development :: Libraries :: Python Modules',
-    ],
-    **extra
+    ]
 )
