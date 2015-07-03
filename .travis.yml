@@ -9,7 +9,7 @@ python:
   - "3.4"
 install:
   - pip install -e .
-  - pip install -r requirements.txt "$DJANGO_SPEC"
+  - pip install -r requirements/py`echo $TRAVIS_PYTHON_VERSION|cut -d'.' -f1`.txt "$DJANGO_SPEC"
   - pip install coveralls
 script:
   - python run_tests.py
