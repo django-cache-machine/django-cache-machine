@@ -302,10 +302,10 @@ def cached_with(obj, f, f_key, timeout=DEFAULT_TIMEOUT):
         obj_key = (obj.query_key() if hasattr(obj, 'query_key')
                    else obj.cache_key)
     except (AttributeError, EmptyResultSet):
-        log.warning(u('%r cannot be cached.' % encoding.smart_str(obj)))
+        log.warning(u('%r cannot be cached.') % encoding.smart_text(obj))
         return f()
 
-    key = '%s:%s' % tuple(map(encoding.smart_str, (f_key, obj_key)))
+    key = u('%s:%s') % tuple(map(encoding.smart_text, (f_key, obj_key)))
     # Put the key generated in cached() into this object's flush list.
     invalidator.add_to_flush_list(
         {obj.flush_key(): [_function_cache_key(key)]})
