@@ -3,13 +3,20 @@
 Release Notes
 ==================
 
-v0.8.1 (release date TBD)
---------------------------------------
+v0.9 (release date TBD)
+-----------------------
+
+- Support for Python 3
+
+v0.8.1 (2015-07-03)
+-----------------------
 
 This release is primarily aimed at adding support for more recent versions of
 Django and catching up on recent contributions.
 
-- Allow test suite to run under Django 1.7 and Django 1.8
+- Support for Django 1.7 and Django 1.8
+- Fix bug in parsing of ``REDIS_BACKEND`` URI
+- Miscellaneous bug fixes and documentation corrections
 
 Backwards Incompatible Changes
 ________________________________
