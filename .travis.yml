@@ -12,7 +12,7 @@ install:
   - pip install -r requirements/py`echo $TRAVIS_PYTHON_VERSION|cut -d'.' -f1`.txt "$DJANGO_SPEC"
   - pip install coveralls
 script:
-  - python run_tests.py
+  - python run_tests.py --with-coverage
   - flake8 .
 after_success:
   - coveralls
