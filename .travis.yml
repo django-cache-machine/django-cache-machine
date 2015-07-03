@@ -5,6 +5,8 @@ services:
 python:
   - "2.6"
   - "2.7"
+  - "3.3"
+  - "3.4"
 install:
   - pip install -e .
   - pip install -r requirements.txt "$DJANGO_SPEC"
@@ -26,3 +28,7 @@ matrix:
       env: DJANGO_SPEC="Django>=1.7,<1.8"
     - python: "2.6"
       env: DJANGO_SPEC="Django>=1.8,<1.9"
+    - python: "3.3"
+      env: DJANGO_SPEC="Django>=1.4,<1.5"
+    - python: "3.4"
+      env: DJANGO_SPEC="Django>=1.4,<1.5"
