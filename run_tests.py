@@ -6,6 +6,7 @@ automatically.
 """
 import os
 import sys
+import argparse
 
 from subprocess import call
 try:
@@ -33,18 +34,29 @@ SETTINGS = (
 
 
 def main():
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--with-coverage', action='store_true',
+                        help='Run tests with coverage.py and display coverage report')
+    parser.add_argument('--settings', choices=SETTINGS,
+                        help='Run tests only for the specified settings file')
+    args = parser.parse_args()
+    settings = args.settings and [args.settings] or SETTINGS
     results = []
     django_admin = check_output(['which', 'django-admin.py']).strip()
-    for i, settings in enumerate(SETTINGS):
-        print('Running tests for: %s' % settings)
-        os.environ['DJANGO_SETTINGS_MODULE'] = 'cache_machine.%s' % settings
+    for i, settings_module in enumerate(settings):
+        print('Running tests for: %s' % settings_module)
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'cache_machine.%s' % settings_module
         # append to the existing coverage data for all but the first run
-        if i > 0:
-            test_cmd = ['coverage', 'run', '--append', django_admin, 'test']
+        if args.with_coverage and i > 0:
+            test_cmd = ['coverage', 'run', '--append']
+        elif args.with_coverage:
+            test_cmd = ['coverage', 'run']
         else:
-            test_cmd = ['coverage', 'run', django_admin, 'test']
+            test_cmd = []
+        test_cmd += [django_admin, 'test']
         results.append(call(test_cmd))
-        results.append(call(['coverage', 'report', '-m', '--fail-under', '70']))
+        if args.with_coverage:
+            results.append(call(['coverage', 'report', '-m', '--fail-under', '70']))
     sys.exit(any(results) and 1 or 0)
 
 
