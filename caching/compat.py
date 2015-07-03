@@ -14,9 +14,10 @@ else:
 
 if sys.version_info < (3,):
     import codecs
+
     def u(x):
         return codecs.unicode_escape_decode(x)[0]
-    basestring_ = basestring
+    basestring_ = basestring  # flake8: noqa
 else:
     def u(x):
         return x
