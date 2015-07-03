@@ -342,8 +342,8 @@ class CachingTestCase(TestCase):
         eq_(base.cached_with([], f, 'key'), 1)
 
     def test_cached_with_unicode(self):
-        ustr = u('\\u05ea\\u05d9\\u05d0\\u05d5\\u05e8 \\u05d0\\u05d5\\u05e1\\u05e3')
-        ustr = ':'.join(map(encoding.smart_str, [ustr]))
+        ustr = encoding.smart_bytes(u('\\u05ea\\u05d9\\u05d0\\u05d5\\u05e8 '
+                                      '\\u05d0\\u05d5\\u05e1\\u05e3'))
         obj = mock.Mock()
         obj.query_key.return_value = u('xxx')
         obj.flush_key.return_value = 'key'

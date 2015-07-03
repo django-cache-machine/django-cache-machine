@@ -39,7 +39,7 @@ log = logging.getLogger('caching.invalidation')
 
 def make_key(k, with_locale=True):
     """Generate the full key for ``k``, with a prefix."""
-    key = '%s:%s' % (CACHE_PREFIX, encoding.smart_text(k))
+    key = encoding.smart_text('%s:%s' % (CACHE_PREFIX, k))
     if with_locale:
         key += encoding.smart_text(translation.get_language())
     # memcached keys must be < 250 bytes and w/o whitespace, but it's nice
@@ -172,6 +172,8 @@ class RedisInvalidator(Invalidator):
         pipe = redis.pipeline(transaction=False)
         for key, list_ in list(mapping.items()):
             for query_key in list_:
+                # Redis happily accepts unicode, but returns byte strings,
+                # so manually encode and decode the keys on the flush list here
                 pipe.sadd(self.safe_key(key), query_key.encode('utf-8'))
         pipe.execute()
 
