@@ -63,7 +63,7 @@ options simply define a separate ``cache_machine`` entry for the
 .. note::
 
     Cache Machine also supports the other memcache backend support by
-    Django >= 1.4 based on pylibmbc_:
+    Django >= 1.4 based on pylibmc_:
     ``caching.backends.memcached.PyLibMCCache``.
 
 .. _pylibmc: http://sendapatch.se/projects/pylibmc/
@@ -215,7 +215,26 @@ If someone wants to write a template tag for Django templates, I'd love to add
 it.
 
 
-Classes that May Interest You
+Redis Support
+-------------
+
+Cache Machine support storing flush lists in Redis rather than memcached, which
+is more efficient because Redis can manipulate the lists on the server side
+rather than having to tranfer the entire list back and forth for each
+modification.
+
+To enable Redis support for Cache Machine, add the following to your settings
+file, replacing ``localhost`` with the hostname of your Redis server::
+
+    CACHE_MACHINE_USE_REDIS = True
+    REDIS_BACKEND = 'redis://localhost:6379'
+
+**Please note:** When using Redis, memcached is still used for caching model
+objects, i.e., only the flush lists are stored in Redis. You still need to
+configure ``CACHES`` the way you would normally for Cache Machine.
+
+
+Classes That May Interest You
 -----------------------------
 
 .. autoclass:: caching.base.CacheMachine
