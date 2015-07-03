@@ -11,6 +11,8 @@ from django.core.cache.backends.base import InvalidCacheBackendError
 from django.utils import encoding, translation
 from django.utils.six.moves.urllib.parse import parse_qsl
 
+from .compat import basestring_
+
 try:
     import redis as redislib
 except ImportError:
@@ -30,29 +32,29 @@ except (InvalidCacheBackendError, ValueError):
 
 CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
 FETCH_BY_ID = getattr(settings, 'FETCH_BY_ID', False)
-FLUSH = CACHE_PREFIX + ':flush:'
+FLUSH = encoding.smart_bytes(CACHE_PREFIX + ':flush:')
 
 log = logging.getLogger('caching.invalidation')
 
 
 def make_key(k, with_locale=True):
     """Generate the full key for ``k``, with a prefix."""
-    key = encoding.smart_str('%s:%s' % (CACHE_PREFIX, k))
+    key = encoding.smart_bytes(':'.join((CACHE_PREFIX, k)))
     if with_locale:
-        key += encoding.smart_str(translation.get_language())
+        key += encoding.smart_bytes(translation.get_language())
     # memcached keys must be < 250 bytes and w/o whitespace, but it's nice
     # to see the keys when using locmem.
-    return hashlib.md5(key).hexdigest()
+    return encoding.smart_bytes(hashlib.md5(key).hexdigest())
 
 
 def flush_key(obj):
     """We put flush lists in the flush: namespace."""
-    key = obj if isinstance(obj, basestring) else obj.cache_key
+    key = obj if isinstance(obj, basestring_) else obj.cache_key
     return FLUSH + make_key(key, with_locale=False)
 
 
 def byid(obj):
-    key = obj if isinstance(obj, basestring) else obj.cache_key
+    key = obj if isinstance(obj, basestring_) else obj.cache_key
     return make_key('byid:' + key)
 
 
@@ -67,7 +69,7 @@ def safe_redis(return_type):
         def wrapper(*args, **kw):
             try:
                 return f(*args, **kw)
-            except (socket.error, redislib.RedisError), e:
+            except (socket.error, redislib.RedisError) as e:
                 log.error('redis error: %s' % e)
                 # log.error('%r\n%r : %r' % (f.__name__, args[1:], kw))
                 if hasattr(return_type, '__call__'):
@@ -137,8 +139,8 @@ class Invalidator(object):
     def add_to_flush_list(self, mapping):
         """Update flush lists with the {flush_key: [query_key,...]} map."""
         flush_lists = collections.defaultdict(set)
-        flush_lists.update(cache.get_many(mapping.keys()))
-        for key, list_ in mapping.items():
+        flush_lists.update(cache.get_many(list(mapping.keys())))
+        for key, list_ in list(mapping.items()):
             if flush_lists[key] is None:
                 flush_lists[key] = set(list_)
             else:
@@ -148,7 +150,7 @@ class Invalidator(object):
     def get_flush_lists(self, keys):
         """Return a set of object keys from the lists in `keys`."""
         return set(e for flush_list in
-                   filter(None, cache.get_many(keys).values())
+                   [_f for _f in list(cache.get_many(keys).values()) if _f]
                    for e in flush_list)
 
     def clear_flush_lists(self, keys):
@@ -159,7 +161,7 @@ class Invalidator(object):
 class RedisInvalidator(Invalidator):
 
     def safe_key(self, key):
-        if ' ' in key or '\n' in key:
+        if b' ' in key or b'\n' in key:
             log.warning('BAD KEY: "%s"' % key)
             return ''
         return key
@@ -168,18 +170,18 @@ class RedisInvalidator(Invalidator):
     def add_to_flush_list(self, mapping):
         """Update flush lists with the {flush_key: [query_key,...]} map."""
         pipe = redis.pipeline(transaction=False)
-        for key, list_ in mapping.items():
+        for key, list_ in list(mapping.items()):
             for query_key in list_:
                 pipe.sadd(self.safe_key(key), query_key)
         pipe.execute()
 
     @safe_redis(set)
     def get_flush_lists(self, keys):
-        return redis.sunion(map(self.safe_key, keys))
+        return redis.sunion(list(map(self.safe_key, keys)))
 
     @safe_redis(None)
     def clear_flush_lists(self, keys):
-        redis.delete(*map(self.safe_key, keys))
+        redis.delete(*list(map(self.safe_key, keys)))
 
 
 class NullInvalidator(Invalidator):

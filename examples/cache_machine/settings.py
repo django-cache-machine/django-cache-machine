@@ -1,6 +1,6 @@
 CACHES = {
     'default': {
-        'BACKEND': 'caching.backends.memcached.MemcachedCache',
+        'BACKEND': 'caching.backends.memcached.PyLibMCCache',
         'LOCATION': 'localhost:11211',
     },
 }

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Creating standalone Django apps is a PITA because you're not in a project, so
 you don't have a settings.py file.  I can never remember to define
