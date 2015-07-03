@@ -15,7 +15,7 @@ DATABASES = {
     'slave': {
         'NAME': 'test_slave.db',
         'ENGINE': 'django.db.backends.sqlite3',
-        }
+    },
 }
 
 INSTALLED_APPS = (
