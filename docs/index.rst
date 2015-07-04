@@ -229,9 +229,10 @@ file, replacing ``localhost`` with the hostname of your Redis server::
     CACHE_MACHINE_USE_REDIS = True
     REDIS_BACKEND = 'redis://localhost:6379'
 
-**Please note:** When using Redis, memcached is still used for caching model
-objects, i.e., only the flush lists are stored in Redis. You still need to
-configure ``CACHES`` the way you would normally for Cache Machine.
+.. note::
+    When using Redis, memcached is still used for caching model objects, i.e.,
+    only the flush lists are stored in Redis. You still need to configure
+    ``CACHES`` the way you would normally for Cache Machine.
 
 
 Classes That May Interest You
