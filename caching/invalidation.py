@@ -27,17 +27,14 @@ try:
 except (InvalidCacheBackendError, ValueError):
     cache = default_cache
 
-
-CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
-FETCH_BY_ID = getattr(settings, 'FETCH_BY_ID', False)
-FLUSH = CACHE_PREFIX + ':flush:'
+from caching import config
 
 log = logging.getLogger('caching.invalidation')
 
 
 def make_key(k, with_locale=True):
     """Generate the full key for ``k``, with a prefix."""
-    key = encoding.smart_str('%s:%s' % (CACHE_PREFIX, k))
+    key = encoding.smart_str('%s:%s' % (config.CACHE_PREFIX, k))
     if with_locale:
         key += encoding.smart_str(translation.get_language())
     # memcached keys must be < 250 bytes and w/o whitespace, but it's nice
@@ -48,7 +45,7 @@ def make_key(k, with_locale=True):
 def flush_key(obj):
     """We put flush lists in the flush: namespace."""
     key = obj if isinstance(obj, basestring) else obj.cache_key
-    return FLUSH + make_key(key, with_locale=False)
+    return config.FLUSH + make_key(key, with_locale=False)
 
 
 def byid(obj):
@@ -84,14 +81,15 @@ class Invalidator(object):
         """Invalidate all the flush lists named by the list of ``keys``."""
         if not keys:
             return
-        flush, flush_keys = self.find_flush_lists(keys)
-
-        if flush:
-            cache.delete_many(flush)
+        obj_keys, flush_keys = self.find_flush_lists(keys)
+        if obj_keys:
+            log.debug('obj_keys: %s' % obj_keys)
+            cache.delete_many(obj_keys)
         if flush_keys:
+            log.debug('flush_keys: %s' % flush_keys)
             self.clear_flush_lists(flush_keys)
 
-    def cache_objects(self, objects, query_key, query_flush):
+    def cache_objects(self, model, objects, query_key, query_flush):
         # Add this query to the flush list of each object.  We include
         # query_flush so that other things can be cached against the queryset
         # and still participate in invalidation.
@@ -99,16 +97,21 @@ class Invalidator(object):
 
         flush_lists = collections.defaultdict(set)
         for key in flush_keys:
+            log.debug('adding %s to %s' % (query_flush, key))
             flush_lists[key].add(query_flush)
         flush_lists[query_flush].add(query_key)
-
+        # Add this query to the flush key for the entire model, if enabled
+        model_flush = flush_key(model.model_key())
+        if config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL:
+            flush_lists[model_flush].add(query_key)
         # Add each object to the flush lists of its foreign keys.
         for obj in objects:
             obj_flush = obj.flush_key()
             for key in map(flush_key, obj._cache_keys()):
-                if key != obj_flush:
+                if key not in (obj_flush, model_flush):
+                    log.debug('related: adding %s to %s' % (obj_flush, key))
                     flush_lists[key].add(obj_flush)
-                if FETCH_BY_ID:
+                if config.FETCH_BY_ID:
                     flush_lists[key].add(byid(obj))
         self.add_to_flush_list(flush_lists)
 
@@ -119,20 +122,24 @@ class Invalidator(object):
         The search starts with the lists in `keys` and expands to any flush
         lists found therein.  Returns ({objects to flush}, {flush keys found}).
         """
-        new_keys = keys = set(map(flush_key, keys))
-        flush = set(keys)
+        objs = set(keys)
+        search_keys = keys = set(map(flush_key, keys))
 
         # Add other flush keys from the lists, which happens when a parent
         # object includes a foreign key.
         while 1:
-            to_flush = self.get_flush_lists(new_keys)
-            flush.update(to_flush)
-            new_keys = set(k for k in to_flush if k.startswith(FLUSH))
-            diff = new_keys.difference(keys)
-            if diff:
+            new_keys = set()
+            for key in self.get_flush_lists(search_keys):
+                if key.startswith(config.FLUSH):
+                    new_keys.add(key)
+                else:
+                    objs.add(key)
+            if new_keys:
+                log.debug('search for %s found keys %s' % (search_keys, new_keys))
                 keys.update(new_keys)
+                search_keys = new_keys
             else:
-                return flush, keys
+                return objs, keys
 
     def add_to_flush_list(self, mapping):
         """Update flush lists with the {flush_key: [query_key,...]} map."""
@@ -242,9 +249,9 @@ def get_redis_backend():
                           socket_timeout=socket_timeout)
 
 
-if getattr(settings, 'CACHE_MACHINE_NO_INVALIDATION', False):
+if config.CACHE_MACHINE_NO_INVALIDATION:
     invalidator = NullInvalidator()
-elif getattr(settings, 'CACHE_MACHINE_USE_REDIS', False):
+elif config.CACHE_MACHINE_USE_REDIS:
     redis = get_redis_backend()
     invalidator = RedisInvalidator()
 else:

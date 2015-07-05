@@ -8,6 +8,7 @@ from django.db.models import signals
 from django.db.models.sql import query, EmptyResultSet
 from django.utils import encoding
 
+from caching import config
 from .compat import DEFAULT_TIMEOUT
 from .invalidation import invalidator, flush_key, make_key, byid, cache
 
@@ -20,12 +21,6 @@ class NullHandler(logging.Handler):
 
 log = logging.getLogger('caching')
 log.addHandler(NullHandler())
-
-NO_CACHE = -1
-CACHE_PREFIX = getattr(settings, 'CACHE_PREFIX', '')
-FETCH_BY_ID = getattr(settings, 'FETCH_BY_ID', False)
-CACHE_EMPTY_QUERYSETS = getattr(settings, 'CACHE_EMPTY_QUERYSETS', False)
-TIMEOUT = getattr(settings, 'CACHE_COUNT_TIMEOUT', NO_CACHE)
 
 
 class CachingManager(models.Manager):
@@ -45,14 +40,23 @@ class CachingManager(models.Manager):
         return super(CachingManager, self).contribute_to_class(cls, name)
 
     def post_save(self, instance, **kwargs):
-        self.invalidate(instance)
+        self.invalidate(instance, is_new_instance=kwargs['created'],
+                        model_cls=kwargs['sender'])
 
     def post_delete(self, instance, **kwargs):
         self.invalidate(instance)
 
-    def invalidate(self, *objects):
+    def invalidate(self, *objects, **kwargs):
         """Invalidate all the flush lists associated with ``objects``."""
         keys = [k for o in objects for k in o._cache_keys()]
+        # If whole-model invalidation on create is enabled, include this model's
+        # key in the list to be invalidated. Note that the key itself won't
+        # contain anything in the cache, but its corresponding flush key will.
+        is_new_instance = kwargs.pop('is_new_instance', False)
+        model_cls = kwargs.pop('model_cls', None)
+        if config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL and \
+          is_new_instance and model_cls and hasattr(model_cls, 'model_key'):
+            keys.append(model_cls.model_key())
         invalidator.invalidate_keys(keys)
 
     def raw(self, raw_query, params=None, *args, **kwargs):
@@ -63,7 +67,7 @@ class CachingManager(models.Manager):
         return self.get_queryset().cache(timeout)
 
     def no_cache(self):
-        return self.cache(NO_CACHE)
+        return self.cache(config.NO_CACHE)
 
 
 class CacheMachine(object):
@@ -74,7 +78,8 @@ class CacheMachine(object):
     called to get an iterator over some database results.
     """
 
-    def __init__(self, query_string, iter_function, timeout=DEFAULT_TIMEOUT, db='default'):
+    def __init__(self, model, query_string, iter_function, timeout=DEFAULT_TIMEOUT, db='default'):
+        self.model = model
         self.query_string = query_string
         self.iter_function = iter_function
         self.timeout = timeout
@@ -118,7 +123,7 @@ class CacheMachine(object):
                 to_cache.append(obj)
                 yield obj
         except StopIteration:
-            if to_cache or CACHE_EMPTY_QUERYSETS:
+            if to_cache or config.CACHE_EMPTY_QUERYSETS:
                 self.cache_objects(to_cache)
             raise
 
@@ -127,7 +132,7 @@ class CacheMachine(object):
         query_key = self.query_key()
         query_flush = flush_key(self.query_string)
         cache.add(query_key, objects, timeout=self.timeout)
-        invalidator.cache_objects(objects, query_key, query_flush)
+        invalidator.cache_objects(self.model, objects, query_key, query_flush)
 
 
 class CachingQuerySet(models.query.QuerySet):
@@ -146,7 +151,7 @@ class CachingQuerySet(models.query.QuerySet):
 
     def iterator(self):
         iterator = super(CachingQuerySet, self).iterator
-        if self.timeout == NO_CACHE:
+        if self.timeout == config.NO_CACHE:
             return iter(iterator())
         else:
             try:
@@ -154,9 +159,9 @@ class CachingQuerySet(models.query.QuerySet):
                 query_string = self.query_key()
             except query.EmptyResultSet:
                 return iterator()
-            if FETCH_BY_ID:
+            if config.FETCH_BY_ID:
                 iterator = self.fetch_by_id
-            return iter(CacheMachine(query_string, iterator, self.timeout, db=self.db))
+            return iter(CacheMachine(self.model, query_string, iterator, self.timeout, db=self.db))
 
     def fetch_by_id(self):
         """
@@ -208,10 +213,10 @@ class CachingQuerySet(models.query.QuerySet):
             query_string = 'count:%s' % self.query_key()
         except query.EmptyResultSet:
             return 0
-        if self.timeout == NO_CACHE or TIMEOUT == NO_CACHE:
+        if self.timeout == config.NO_CACHE or config.TIMEOUT == config.NO_CACHE:
             return super_count()
         else:
-            return cached_with(self, super_count, query_string, TIMEOUT)
+            return cached_with(self, super_count, query_string, config.TIMEOUT)
 
     def cache(self, timeout=DEFAULT_TIMEOUT):
         qs = self._clone()
@@ -219,7 +224,7 @@ class CachingQuerySet(models.query.QuerySet):
         return qs
 
     def no_cache(self):
-        return self.cache(NO_CACHE)
+        return self.cache(config.NO_CACHE)
 
     def _clone(self, *args, **kw):
         qs = super(CachingQuerySet, self)._clone(*args, **kw)
@@ -237,6 +242,15 @@ class CachingMixin(object):
     def cache_key(self):
         """Return a cache key based on the object's primary key."""
         return self._cache_key(self.pk, self._state.db)
+
+    @classmethod
+    def model_key(cls):
+        """
+        Return a cache key for the entire model (used by invalidation).
+        """
+        # use dummy PK and DB reference that will never resolve to an actual
+        # cache key for an objection
+        return cls._cache_key('all-pks', 'all-dbs')
 
     @classmethod
     def _cache_key(cls, pk, db):
@@ -267,13 +281,13 @@ class CachingRawQuerySet(models.query.RawQuerySet):
 
     def __iter__(self):
         iterator = super(CachingRawQuerySet, self).__iter__
-        if self.timeout == NO_CACHE:
+        if self.timeout == config.NO_CACHE:
             iterator = iterator()
             while True:
                 yield iterator.next()
         else:
             sql = self.raw_query % tuple(self.params)
-            for obj in CacheMachine(sql, iterator, timeout=self.timeout):
+            for obj in CacheMachine(self.model, sql, iterator, timeout=self.timeout):
                 yield obj
             raise StopIteration
 
