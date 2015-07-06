@@ -2,7 +2,6 @@ import functools
 import logging
 
 import django
-from django.conf import settings
 from django.db import models
 from django.db.models import signals
 from django.db.models.sql import query, EmptyResultSet
@@ -54,8 +53,8 @@ class CachingManager(models.Manager):
         # contain anything in the cache, but its corresponding flush key will.
         is_new_instance = kwargs.pop('is_new_instance', False)
         model_cls = kwargs.pop('model_cls', None)
-        if config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL and \
-          is_new_instance and model_cls and hasattr(model_cls, 'model_key'):
+        if (config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL and
+           is_new_instance and model_cls and hasattr(model_cls, 'model_key')):
             keys.append(model_cls.model_key())
         invalidator.invalidate_keys(keys)
 
