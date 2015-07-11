@@ -1,6 +1,5 @@
 from __future__ import unicode_literals
 
-import sys
 import django
 
 __all__ = ['DEFAULT_TIMEOUT', 'FOREVER']
