@@ -1,9 +1,7 @@
 # These are the reqs to build docs and run tests.
 --no-binary :all:  # workaround for https://bitbucket.org/ned/coveragepy/issue/382/pip-install-coverage-uses-slower-pytracer
 sphinx
-mock
 django-nose
-python-memcached
 jinja2
 redis
 flake8

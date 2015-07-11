@@ -1,18 +1,22 @@
-# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 import django
+import jinja2
+
 from django.conf import settings
 from django.test import TestCase
-from django.utils import translation, encoding
+from django.utils import translation, encoding, six
 
-import jinja2
-import mock
+if six.PY3:
+    from unittest import mock
+else:
+    import mock
 from nose.tools import eq_
 
 from caching import base, invalidation
+from .testapp.models import Addon, User
 
 cache = invalidation.cache
-
-from testapp.models import Addon, User
 
 if django.get_version().startswith('1.3'):
     class settings_patch(object):
@@ -21,7 +25,7 @@ if django.get_version().startswith('1.3'):
 
         def __enter__(self):
             self._old_settings = dict((k, getattr(settings, k, None)) for k in self.options)
-            for k, v in self.options.items():
+            for k, v in list(self.options.items()):
                 setattr(settings, k, v)
 
         def __exit__(self, *args):
@@ -342,9 +346,10 @@ class CachingTestCase(TestCase):
         eq_(base.cached_with([], f, 'key'), 1)
 
     def test_cached_with_unicode(self):
-        u = ':'.join(map(encoding.smart_str, [u'תיאור אוסף']))
+        u = encoding.smart_bytes('\\u05ea\\u05d9\\u05d0\\u05d5\\u05e8 '
+                                 '\\u05d0\\u05d5\\u05e1\\u05e3')
         obj = mock.Mock()
-        obj.query_key.return_value = u'xxx'
+        obj.query_key.return_value = 'xxx'
         obj.flush_key.return_value = 'key'
         f = lambda: 1
         eq_(base.cached_with(obj, f, 'adf:%s' % u), 1)
@@ -428,7 +433,7 @@ class CachingTestCase(TestCase):
         eq_(kwargs, {'timeout': 12})
 
     def test_unicode_key(self):
-        list(User.objects.filter(name=u'ümlaüt'))
+        list(User.objects.filter(name='\\xfcmla\\xfct'))
 
     def test_empty_in(self):
         # Raised an exception before fixing #2.
@@ -463,7 +468,7 @@ class CachingTestCase(TestCase):
         eq_([a.val for a in u.addon_set.all()], [42, 17])
 
     def test_make_key_unicode(self):
-        translation.activate(u'en-US')
+        translation.activate('en-US')
         f = 'fragment\xe9\x9b\xbb\xe8\x85\xa6\xe7\x8e'
         # This would crash with a unicode error.
         base.make_key(f, with_locale=True)

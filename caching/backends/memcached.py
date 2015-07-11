@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from django.core.cache.backends import memcached
 
 from caching.compat import DEFAULT_TIMEOUT
