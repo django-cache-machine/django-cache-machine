@@ -8,10 +8,8 @@ import django
 from django.conf import settings
 from django.core.cache import cache as default_cache
 from django.core.cache.backends.base import InvalidCacheBackendError
-from django.utils import encoding, translation
+from django.utils import encoding, translation, six
 from django.utils.six.moves.urllib.parse import parse_qsl
-
-from .compat import basestring_
 
 try:
     import redis as redislib
@@ -49,12 +47,12 @@ def make_key(k, with_locale=True):
 
 def flush_key(obj):
     """We put flush lists in the flush: namespace."""
-    key = obj if isinstance(obj, basestring_) else obj.cache_key
+    key = obj if isinstance(obj, six.string_types) else obj.cache_key
     return FLUSH + make_key(key, with_locale=False)
 
 
 def byid(obj):
-    key = obj if isinstance(obj, basestring_) else obj.cache_key
+    key = obj if isinstance(obj, six.string_types) else obj.cache_key
     return make_key('byid:' + key)
 
 

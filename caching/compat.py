@@ -1,7 +1,7 @@
 import sys
 import django
 
-__all__ = ['DEFAULT_TIMEOUT', 'FOREVER', 'u', 'basestring_']
+__all__ = ['DEFAULT_TIMEOUT', 'FOREVER', 'u']
 
 
 if django.VERSION[:2] >= (1, 6):
@@ -17,8 +17,6 @@ if sys.version_info < (3,):
 
     def u(x):
         return codecs.unicode_escape_decode(x)[0]
-    basestring_ = basestring  # flake8: noqa
 else:
     def u(x):
         return x
-    basestring_ = str
