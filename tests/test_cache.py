@@ -346,13 +346,13 @@ class CachingTestCase(TestCase):
         eq_(base.cached_with([], f, 'key'), 1)
 
     def test_cached_with_unicode(self):
-        ustr = encoding.smart_bytes('\\u05ea\\u05d9\\u05d0\\u05d5\\u05e8 '
-                                    '\\u05d0\\u05d5\\u05e1\\u05e3')
+        u = encoding.smart_bytes('\\u05ea\\u05d9\\u05d0\\u05d5\\u05e8 '
+                                 '\\u05d0\\u05d5\\u05e1\\u05e3')
         obj = mock.Mock()
         obj.query_key.return_value = 'xxx'
         obj.flush_key.return_value = 'key'
         f = lambda: 1
-        eq_(base.cached_with(obj, f, 'adf:%s' % ustr), 1)
+        eq_(base.cached_with(obj, f, 'adf:%s' % u), 1)
 
     def test_cached_method(self):
         a = Addon.objects.get(id=1)
