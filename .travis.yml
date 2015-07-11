@@ -2,13 +2,18 @@ language: python
 services:
   - memcached
   - redis-server
+# Use Travis' build matrix and exclude functions rather than running tox
+# directly so that we can run the builds in parallel and get coverage reports
+# for each Python/Django version combo
 python:
   - "2.6"
   - "2.7"
+  - "3.3"
+  - "3.4"
 install:
   - pip install -U pip  # make sure we have the latest version
   - pip install -e .
-  - pip install -r requirements.txt "$DJANGO_SPEC"
+  - pip install -r requirements/py`echo $TRAVIS_PYTHON_VERSION|cut -d'.' -f1`.txt "$DJANGO_SPEC"
   - pip install coveralls
 script:
   - python run_tests.py --with-coverage
@@ -27,3 +32,9 @@ matrix:
       env: DJANGO_SPEC="Django>=1.7,<1.8"
     - python: "2.6"
       env: DJANGO_SPEC="Django>=1.8,<1.9"
+    - python: "3.3"
+      env: DJANGO_SPEC="Django>=1.4,<1.5"
+    - python: "3.4"
+      env: DJANGO_SPEC="Django>=1.4,<1.5"
+# Adding sudo: False tells Travis to use their container-based infrastructure, which is somewhat faster.
+sudo: False

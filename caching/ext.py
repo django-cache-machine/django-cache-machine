@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from django.conf import settings
 from django.utils import encoding
 
@@ -33,7 +35,7 @@ class FragmentCacheExtension(Extension):
         # we only listen to ``'cache'`` so this will be a name token with
         # `cache` as value.  We get the line number so that we can give
         # that line number to the nodes we create by hand.
-        lineno = parser.stream.next().lineno
+        lineno = next(parser.stream).lineno
 
         # Use the filename + line number and first object for the cache key.
         name = '%s+%s' % (self.name, lineno)

@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import functools
 import logging
 
@@ -93,7 +95,7 @@ class CacheMachine(object):
         master), throwing a Django ValueError in the process. Django prevents
         cross DB model saving among related objects.
         """
-        query_db_string = u'qs:%s::db:%s' % (self.query_string, self.db)
+        query_db_string = 'qs:%s::db:%s' % (self.query_string, self.db)
         return make_key(query_db_string, with_locale=False)
 
     def __iter__(self):
@@ -117,7 +119,7 @@ class CacheMachine(object):
         to_cache = []
         try:
             while True:
-                obj = iterator.next()
+                obj = next(iterator)
                 obj.from_cache = False
                 to_cache.append(obj)
                 yield obj
@@ -173,14 +175,14 @@ class CachingQuerySet(models.query.QuerySet):
         """
         # Include columns from extra since they could be used in the query's
         # order_by.
-        vals = self.values_list('pk', *self.query.extra.keys())
+        vals = self.values_list('pk', *list(self.query.extra.keys()))
         pks = [val[0] for val in vals]
         keys = dict((byid(self.model._cache_key(pk, self.db)), pk) for pk in pks)
-        cached = dict((k, v) for k, v in cache.get_many(keys).items()
+        cached = dict((k, v) for k, v in list(cache.get_many(keys).items())
                       if v is not None)
 
         # Pick up the objects we missed.
-        missed = [pk for key, pk in keys.items() if key not in cached]
+        missed = [pk for key, pk in list(keys.items()) if key not in cached]
         if missed:
             others = self.fetch_missed(missed)
             # Put the fetched objects back in cache.
@@ -190,7 +192,7 @@ class CachingQuerySet(models.query.QuerySet):
             new = {}
 
         # Use pks to return the objects in the correct order.
-        objects = dict((o.pk, o) for o in cached.values() + new.values())
+        objects = dict((o.pk, o) for o in list(cached.values()) + list(new.values()))
         for pk in pks:
             yield objects[pk]
 
@@ -259,14 +261,14 @@ class CachingMixin(object):
         For the Addon class, with a pk of 2, we get "o:addons.addon:2".
         """
         key_parts = ('o', cls._meta, pk, db)
-        return ':'.join(map(encoding.smart_unicode, key_parts))
+        return ':'.join(map(encoding.smart_text, key_parts))
 
     def _cache_keys(self):
         """Return the cache key for self plus all related foreign keys."""
         fks = dict((f, getattr(self, f.attname)) for f in self._meta.fields
                    if isinstance(f, models.ForeignKey))
 
-        keys = [fk.rel.to._cache_key(val, self._state.db) for fk, val in fks.items()
+        keys = [fk.rel.to._cache_key(val, self._state.db) for fk, val in list(fks.items())
                 if val is not None and hasattr(fk.rel.to, '_cache_key')]
         return (self.cache_key,) + tuple(keys)
 
@@ -283,7 +285,7 @@ class CachingRawQuerySet(models.query.RawQuerySet):
         if self.timeout == config.NO_CACHE:
             iterator = iterator()
             while True:
-                yield iterator.next()
+                yield next(iterator)
         else:
             sql = self.raw_query % tuple(self.params)
             for obj in CacheMachine(self.model, sql, iterator, timeout=self.timeout):
@@ -315,10 +317,10 @@ def cached_with(obj, f, f_key, timeout=DEFAULT_TIMEOUT):
         obj_key = (obj.query_key() if hasattr(obj, 'query_key')
                    else obj.cache_key)
     except (AttributeError, EmptyResultSet):
-        log.warning(u'%r cannot be cached.' % encoding.smart_str(obj))
+        log.warning('%r cannot be cached.' % encoding.smart_text(obj))
         return f()
 
-    key = '%s:%s' % tuple(map(encoding.smart_str, (f_key, obj_key)))
+    key = '%s:%s' % tuple(map(encoding.smart_text, (f_key, obj_key)))
     # Put the key generated in cached() into this object's flush list.
     invalidator.add_to_flush_list(
         {obj.flush_key(): [_function_cache_key(key)]})
@@ -365,11 +367,11 @@ class MethodWrapper(object):
 
     def __call__(self, *args, **kwargs):
         k = lambda o: o.cache_key if hasattr(o, 'cache_key') else o
-        arg_keys = map(k, args)
-        kwarg_keys = [(key, k(val)) for key, val in kwargs.items()]
+        arg_keys = list(map(k, args))
+        kwarg_keys = [(key, k(val)) for key, val in list(kwargs.items())]
         key_parts = ('m', self.obj.cache_key, self.func.__name__,
                      arg_keys, kwarg_keys)
-        key = ':'.join(map(encoding.smart_unicode, key_parts))
+        key = ':'.join(map(encoding.smart_text, key_parts))
         if key not in self.cache:
             f = functools.partial(self.func, self.obj, *args, **kwargs)
             self.cache[key] = cached_with(self.obj, f, key)
