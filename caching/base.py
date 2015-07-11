@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import functools
 import logging
 
@@ -8,7 +10,7 @@ from django.db.models import signals
 from django.db.models.sql import query, EmptyResultSet
 from django.utils import encoding
 
-from .compat import DEFAULT_TIMEOUT, u
+from .compat import DEFAULT_TIMEOUT
 from .invalidation import invalidator, flush_key, make_key, byid, cache
 
 
@@ -89,7 +91,7 @@ class CacheMachine(object):
         master), throwing a Django ValueError in the process. Django prevents
         cross DB model saving among related objects.
         """
-        query_db_string = u('qs:%s::db:%s') % (self.query_string, self.db)
+        query_db_string = 'qs:%s::db:%s' % (self.query_string, self.db)
         return make_key(query_db_string, with_locale=False)
 
     def __iter__(self):
@@ -302,10 +304,10 @@ def cached_with(obj, f, f_key, timeout=DEFAULT_TIMEOUT):
         obj_key = (obj.query_key() if hasattr(obj, 'query_key')
                    else obj.cache_key)
     except (AttributeError, EmptyResultSet):
-        log.warning(u('%r cannot be cached.') % encoding.smart_text(obj))
+        log.warning('%r cannot be cached.' % encoding.smart_text(obj))
         return f()
 
-    key = u('%s:%s') % tuple(map(encoding.smart_text, (f_key, obj_key)))
+    key = '%s:%s' % tuple(map(encoding.smart_text, (f_key, obj_key)))
     # Put the key generated in cached() into this object's flush list.
     invalidator.add_to_flush_list(
         {obj.flush_key(): [_function_cache_key(key)]})

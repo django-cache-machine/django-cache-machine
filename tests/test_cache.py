@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import django
 from django.conf import settings
 from django.test import TestCase
@@ -8,7 +10,6 @@ import mock
 from nose.tools import eq_
 
 from caching import base, invalidation
-from caching.compat import u
 
 cache = invalidation.cache
 
@@ -342,10 +343,10 @@ class CachingTestCase(TestCase):
         eq_(base.cached_with([], f, 'key'), 1)
 
     def test_cached_with_unicode(self):
-        ustr = encoding.smart_bytes(u('\\u05ea\\u05d9\\u05d0\\u05d5\\u05e8 '
-                                      '\\u05d0\\u05d5\\u05e1\\u05e3'))
+        ustr = encoding.smart_bytes('\\u05ea\\u05d9\\u05d0\\u05d5\\u05e8 '
+                                    '\\u05d0\\u05d5\\u05e1\\u05e3')
         obj = mock.Mock()
-        obj.query_key.return_value = u('xxx')
+        obj.query_key.return_value = 'xxx'
         obj.flush_key.return_value = 'key'
         f = lambda: 1
         eq_(base.cached_with(obj, f, 'adf:%s' % ustr), 1)
@@ -429,7 +430,7 @@ class CachingTestCase(TestCase):
         eq_(kwargs, {'timeout': 12})
 
     def test_unicode_key(self):
-        list(User.objects.filter(name=u('\\xfcmla\\xfct')))
+        list(User.objects.filter(name='\\xfcmla\\xfct'))
 
     def test_empty_in(self):
         # Raised an exception before fixing #2.

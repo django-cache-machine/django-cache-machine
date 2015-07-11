@@ -1,7 +1,9 @@
+from __future__ import unicode_literals
+
 import sys
 import django
 
-__all__ = ['DEFAULT_TIMEOUT', 'FOREVER', 'u']
+__all__ = ['DEFAULT_TIMEOUT', 'FOREVER']
 
 
 if django.VERSION[:2] >= (1, 6):
@@ -11,12 +13,3 @@ if django.VERSION[:2] >= (1, 6):
 else:
     DEFAULT_TIMEOUT = None
     FOREVER = 0
-
-if sys.version_info < (3,):
-    import codecs
-
-    def u(x):
-        return codecs.unicode_escape_decode(x)[0]
-else:
-    def u(x):
-        return x
