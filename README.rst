@@ -17,8 +17,7 @@ For full docs, see https://cache-machine.readthedocs.org/en/latest/.
 Requirements
 ------------
 
-Cache Machine works with Django 1.4-1.8 and Python 2.6 and 2.7. Python 3.3
-and 3.4 support is in progress in the ``py3k`` branch.
+Cache Machine works with Django 1.4-1.8 and Python 2.6, 2.7, 3.3 and 3.4.
 
 
 Installation
