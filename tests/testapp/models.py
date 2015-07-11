@@ -1,8 +1,12 @@
 from __future__ import unicode_literals
 
 from django.db import models
+from django.utils import six
 
-import mock
+if six.PY3:
+    from unittest import mock
+else:
+    import mock
 
 from caching.base import CachingMixin, CachingManager, cached_method
 

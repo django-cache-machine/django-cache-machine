@@ -1,19 +1,22 @@
 from __future__ import unicode_literals
 
 import django
+import jinja2
+
 from django.conf import settings
 from django.test import TestCase
-from django.utils import translation, encoding
+from django.utils import translation, encoding, six
 
-import jinja2
-import mock
+if six.PY3:
+    from unittest import mock
+else:
+    import mock
 from nose.tools import eq_
 
 from caching import base, invalidation
+from .testapp.models import Addon, User
 
 cache = invalidation.cache
-
-from .testapp.models import Addon, User
 
 if django.get_version().startswith('1.3'):
     class settings_patch(object):
