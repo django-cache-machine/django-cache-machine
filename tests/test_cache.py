@@ -465,7 +465,7 @@ class CachingTestCase(TestCase):
 
     def test_make_key_unicode(self):
         translation.activate('en-US')
-        f = 'fragment\xe9\x9b\xbb\xe8\x85\xa6\xe7\x8e\xa6'
+        f = 'fragment\xe9\x9b\xbb\xe8\x85\xa6\xe7\x8e'
         # This would crash with a unicode error.
         base.make_key(f, with_locale=True)
         translation.deactivate()
