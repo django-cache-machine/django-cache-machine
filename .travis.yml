@@ -2,6 +2,9 @@ language: python
 services:
   - memcached
   - redis-server
+# Use Travis' build matrix and exclude functions rather than running tox
+# directly so that we can run the builds in parallel and get coverage reports
+# for each Python/Django version combo
 python:
   - "2.6"
   - "2.7"
