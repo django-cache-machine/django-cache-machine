@@ -40,5 +40,5 @@ Get it from `github <http://github.com/django-cache-machine/django-cache-machine
 
     git clone git://github.com/django-cache-machine/django-cache-machine.git
     cd django-cache-machine
-    pip install -r requirements/py2.txt  # or py3.txt for Python 3
+    pip install -r requirements/py3.txt  # or py2.txt for Python 2
     python run_tests.py
