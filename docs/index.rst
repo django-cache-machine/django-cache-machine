@@ -90,6 +90,8 @@ By default cache machine will not cache empty querysets. To cache them::
 
     CACHE_EMPTY_QUERYSETS = True
 
+.. _object-creation:
+
 Object creation
 ^^^^^^^^^^^^^^^
 
