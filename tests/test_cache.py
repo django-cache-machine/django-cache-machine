@@ -13,7 +13,7 @@ else:
     import mock
 from nose.tools import eq_
 
-from caching import base, invalidation
+from caching import base, invalidation, config
 from .testapp.models import Addon, User
 
 cache = invalidation.cache
@@ -42,12 +42,12 @@ class CachingTestCase(TestCase):
 
     def setUp(self):
         cache.clear()
-        self.old_timeout = base.TIMEOUT
+        self.old_timeout = config.TIMEOUT
         if getattr(settings, 'CACHE_MACHINE_USE_REDIS', False):
             invalidation.redis.flushall()
 
     def tearDown(self):
-        base.TIMEOUT = self.old_timeout
+        config.TIMEOUT = self.old_timeout
 
     def test_flush_key(self):
         """flush_key should work for objects or strings."""
@@ -170,7 +170,7 @@ class CachingTestCase(TestCase):
     def test_raw_nocache(self, CacheMachine):
         base.TIMEOUT = 60
         sql = 'SELECT * FROM %s WHERE id = 1' % Addon._meta.db_table
-        raw = list(Addon.objects.raw(sql, timeout=base.NO_CACHE))
+        raw = list(Addon.objects.raw(sql, timeout=config.NO_CACHE))
         eq_(len(raw), 1)
         raw_addon = raw[0]
         assert not hasattr(raw_addon, 'from_cache')
@@ -178,13 +178,14 @@ class CachingTestCase(TestCase):
 
     @mock.patch('caching.base.cache')
     def test_count_cache(self, cache_mock):
-        base.TIMEOUT = 60
+        config.TIMEOUT = 60
         cache_mock.scheme = 'memcached'
         cache_mock.get.return_value = None
 
         q = Addon.objects.all()
         q.count()
 
+        assert cache_mock.set.call_args, 'set not called'
         args, kwargs = cache_mock.set.call_args
         key, value, timeout = args
         eq_(value, 2)
@@ -192,7 +193,7 @@ class CachingTestCase(TestCase):
 
     @mock.patch('caching.base.cached')
     def test_count_none_timeout(self, cached_mock):
-        base.TIMEOUT = base.NO_CACHE
+        config.TIMEOUT = config.NO_CACHE
         Addon.objects.count()
         eq_(cached_mock.call_count, 0)
 
@@ -448,7 +449,7 @@ class CachingTestCase(TestCase):
             with self.assertNumQueries(k):
                 eq_(len(Addon.objects.filter(pk=42)), 0)
 
-    @mock.patch('caching.base.CACHE_EMPTY_QUERYSETS', True)
+    @mock.patch('caching.config.CACHE_EMPTY_QUERYSETS', True)
     def test_cache_empty_queryset(self):
         for k in (1, 0):
             with self.assertNumQueries(k):
@@ -460,7 +461,7 @@ class CachingTestCase(TestCase):
         Addon.objects.create(val=42, author1=u, author2=u)
         eq_([a.val for a in u.addon_set.all()], [42])
 
-    def test_invalidate_new_object(self):
+    def test_invalidate_new_related_object(self):
         u = User.objects.create()
         Addon.objects.create(val=42, author1=u, author2=u)
         eq_([a.val for a in u.addon_set.all()], [42])
@@ -506,3 +507,29 @@ class CachingTestCase(TestCase):
         host, params = parse_backend_uri(uri)
         self.assertEqual(host, '127.0.0.1:6379')
         self.assertEqual(params, {'socket_timeout': '5'})
+
+    @mock.patch('caching.config.CACHE_INVALIDATE_ON_CREATE', 'whole-model')
+    def test_invalidate_on_create_enabled(self):
+        """ Test that creating new objects invalidates cached queries for that model. """
+        eq_([a.name for a in User.objects.all()], ['fliggy', 'clouseroo'])
+        User.objects.create(name='spam')
+        users = User.objects.all()
+        # our new user should show up and the query should not have come from the cache
+        eq_([a.name for a in users], ['fliggy', 'clouseroo', 'spam'])
+        assert not any([u.from_cache for u in users])
+        # if we run it again, it should be cached this time
+        users = User.objects.all()
+        eq_([a.name for a in users], ['fliggy', 'clouseroo', 'spam'])
+        assert all([u.from_cache for u in User.objects.all()])
+
+    @mock.patch('caching.config.CACHE_INVALIDATE_ON_CREATE', None)
+    def test_invalidate_on_create_disabled(self):
+        """
+        Test that creating new objects does NOT invalidate cached queries when
+        whole-model invalidation on create is disabled.
+        """
+        users = User.objects.all()
+        assert users, "Can't run this test without some users"
+        assert not any([u.from_cache for u in users])
+        User.objects.create(name='spam')
+        assert all([u.from_cache for u in User.objects.all()])

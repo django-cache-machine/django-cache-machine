@@ -3,10 +3,13 @@
 Release Notes
 ==================
 
-v0.9 (release date TBD)
------------------------
+v0.9 (2015-07-29)
+-----------------
 
 - Support for Python 3
+- A new setting, ``CACHE_INVALIDATE_ON_CREATE``, which facilitates invalidation
+  when a new model object is created. For more information, see
+  :ref:`object-creation`.
 
 v0.8.1 (2015-07-03)
 -----------------------

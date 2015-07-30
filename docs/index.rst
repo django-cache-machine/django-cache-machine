@@ -90,6 +90,21 @@ By default cache machine will not cache empty querysets. To cache them::
 
     CACHE_EMPTY_QUERYSETS = True
 
+.. _object-creation:
+
+Object creation
+^^^^^^^^^^^^^^^
+
+By default Cache Machine does not invalidate queries when a new object is
+created, because it can be expensive to maintain a flush list of all the
+queries associated with a given table and cause significant disruption on
+high-volume sites when *all* the queries for a particular model are
+invalidated at once. If these are not issues for your site and immediate
+inclusion of created objects in previously cached queries is desired, you
+can enable this feature as follows::
+
+    CACHE_INVALIDATE_ON_CREATE = 'whole-model'
+
 Cache Manager
 -------------
 
