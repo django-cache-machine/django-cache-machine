@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 import django
 import jinja2
+import pickle
 
 from django.conf import settings
 from django.test import TestCase
@@ -13,7 +14,7 @@ else:
     import mock
 from nose.tools import eq_
 
-from caching import base, invalidation, config
+from caching import base, invalidation, config, compat
 from .testapp.models import Addon, User
 
 cache = invalidation.cache
@@ -533,3 +534,25 @@ class CachingTestCase(TestCase):
         assert not any([u.from_cache for u in users])
         User.objects.create(name='spam')
         assert all([u.from_cache for u in User.objects.all()])
+
+    def test_pickle_queryset(self):
+        """
+        Test for CacheingQuerySet.__getstate__ and CachingQuerySet.__setstate__.
+        """
+        # Make sure CachingQuerySet.timeout, when set to DEFAULT_TIMEOUT, can be safely
+        # pickled/unpickled on/from different Python processes which may have different
+        # underlying values for DEFAULT_TIMEOUT:
+        q1 = Addon.objects.all()
+        assert q1.timeout == compat.DEFAULT_TIMEOUT
+        pickled = pickle.dumps(q1)
+        new_timeout = object()
+        with mock.patch('caching.base.DEFAULT_TIMEOUT', new_timeout):
+            q2 = pickle.loads(pickled)
+            assert q2.timeout == new_timeout
+        # Make sure values other than DEFAULT_TIMEOUT remain unaffected:
+        q1 = Addon.objects.cache(10).all()
+        assert q1.timeout == 10
+        pickled = pickle.dumps(q1)
+        with mock.patch('caching.base.DEFAULT_TIMEOUT', new_timeout):
+            q2 = pickle.loads(pickled)
+            assert q2.timeout == 10

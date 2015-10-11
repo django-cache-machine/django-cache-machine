@@ -138,9 +138,29 @@ class CacheMachine(object):
 
 class CachingQuerySet(models.query.QuerySet):
 
+    _default_timeout_pickle_key = '__DEFAULT_TIMEOUT__'
+
     def __init__(self, *args, **kw):
         super(CachingQuerySet, self).__init__(*args, **kw)
         self.timeout = DEFAULT_TIMEOUT
+
+    def __getstate__(self):
+        """
+        Safely pickle our timeout if it's a DEFAULT_TIMEOUT. This is not needed
+        by cache-machine itself, but by application code that may re-cache objects
+        retrieved using cache-machine.
+        """
+        state = dict()
+        state.update(self.__dict__)
+        if self.timeout == DEFAULT_TIMEOUT:
+            state['timeout'] = self._default_timeout_pickle_key
+        return state
+
+    def __setstate__(self, state):
+        """ Safely unpickle our timeout if it's a DEFAULT_TIMEOUT. """
+        self.__dict__.update(state)
+        if self.timeout == self._default_timeout_pickle_key:
+            self.timeout = DEFAULT_TIMEOUT
 
     def flush_key(self):
         return flush_key(self.query_key())
