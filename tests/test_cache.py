@@ -3,9 +3,10 @@ from __future__ import unicode_literals
 import django
 import jinja2
 import pickle
+import logging
 
 from django.conf import settings
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from django.utils import translation, encoding, six
 
 if six.PY3:
@@ -18,6 +19,7 @@ from caching import base, invalidation, config, compat
 from .testapp.models import Addon, User
 
 cache = invalidation.cache
+log = logging.getLogger(__name__)
 
 if django.get_version().startswith('1.3'):
     class settings_patch(object):
@@ -37,7 +39,6 @@ if django.get_version().startswith('1.3'):
 
 
 class CachingTestCase(TestCase):
-    multi_db = True
     fixtures = ['tests/testapp/fixtures/testapp/test_cache.json']
     extra_apps = ['tests.testapp']
 
@@ -482,25 +483,6 @@ class CachingTestCase(TestCase):
             cache_mock.return_value.values.return_value = [None, [1]]
             eq_(base.invalidator.get_flush_lists(None), set([1]))
 
-    def test_multidb_cache(self):
-        """ Test where master and slave DB result in two different cache keys """
-        assert Addon.objects.get(id=1).from_cache is False
-        assert Addon.objects.get(id=1).from_cache is True
-
-        from_slave = Addon.objects.using('slave').get(id=1)
-        assert from_slave.from_cache is False
-        assert from_slave._state.db == 'slave'
-
-    def test_multidb_fetch_by_id(self):
-        """ Test where master and slave DB result in two different cache keys with FETCH_BY_ID"""
-        with self.settings(FETCH_BY_ID=True):
-            assert Addon.objects.get(id=1).from_cache is False
-            assert Addon.objects.get(id=1).from_cache is True
-
-            from_slave = Addon.objects.using('slave').get(id=1)
-            assert from_slave.from_cache is False
-            assert from_slave._state.db == 'slave'
-
     def test_parse_backend_uri(self):
         """ Test that parse_backend_uri works as intended. Regression for #92. """
         from caching.invalidation import parse_backend_uri
@@ -556,3 +538,46 @@ class CachingTestCase(TestCase):
         with mock.patch('caching.base.DEFAULT_TIMEOUT', new_timeout):
             q2 = pickle.loads(pickled)
             assert q2.timeout == 10
+
+
+# use TransactionTestCase so that ['TEST']['MIRROR'] setting works
+# see https://code.djangoproject.com/ticket/23718
+class MultiDbTestCase(TransactionTestCase):
+    multi_db = True
+    fixtures = ['tests/testapp/fixtures/testapp/test_cache.json']
+    extra_apps = ['tests.testapp']
+
+    def test_multidb_cache(self):
+        """ Test where master and slave DB result in two different cache keys """
+        assert Addon.objects.get(id=1).from_cache is False
+        assert Addon.objects.get(id=1).from_cache is True
+
+        from_slave = Addon.objects.using('slave').get(id=1)
+        assert from_slave.from_cache is False
+        assert from_slave._state.db == 'slave'
+
+    def test_multidb_fetch_by_id(self):
+        """ Test where master and slave DB result in two different cache keys with FETCH_BY_ID"""
+        with self.settings(FETCH_BY_ID=True):
+            assert Addon.objects.get(id=1).from_cache is False
+            assert Addon.objects.get(id=1).from_cache is True
+
+            from_slave = Addon.objects.using('slave').get(id=1)
+            assert from_slave.from_cache is False
+            assert from_slave._state.db == 'slave'
+
+    def test_multidb_master_slave_invalidation(self):
+        """ Test saving an object on one DB invalidates it for all DBs """
+        log.debug('priming the DB & cache')
+        master_obj = User.objects.using('default').create(name='new-test-user')
+        slave_obj = User.objects.using('slave').get(name='new-test-user')
+        assert slave_obj.from_cache is False
+        log.debug('deleting the original object')
+        User.objects.using('default').filter(pk=slave_obj.pk).delete()
+        log.debug('re-creating record with a new primary key')
+        master_obj = User.objects.using('default').create(name='new-test-user')
+        log.debug('attempting to force re-fetch from DB (should not use cache)')
+        slave_obj = User.objects.using('slave').get(name='new-test-user')
+        assert slave_obj.from_cache is False
+        eq_(slave_obj.pk, master_obj.pk)
+        assert False
