@@ -54,7 +54,7 @@ class CachingTestCase(TestCase):
     def test_flush_key(self):
         """flush_key should work for objects or strings."""
         a = Addon.objects.get(id=1)
-        eq_(base.flush_key(a.cache_key), base.flush_key(a))
+        eq_(base.flush_key(a.get_cache_key(incl_db=False)), base.flush_key(a))
 
     def test_cache_key(self):
         a = Addon.objects.get(id=1)
@@ -580,4 +580,3 @@ class MultiDbTestCase(TransactionTestCase):
         slave_obj = User.objects.using('slave').get(name='new-test-user')
         assert slave_obj.from_cache is False
         eq_(slave_obj.pk, master_obj.pk)
-        assert False

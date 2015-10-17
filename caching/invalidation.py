@@ -46,7 +46,7 @@ def make_key(k, with_locale=True):
 
 def flush_key(obj):
     """We put flush lists in the flush: namespace."""
-    key = obj if isinstance(obj, six.string_types) else obj.cache_key
+    key = obj if isinstance(obj, six.string_types) else obj.get_cache_key(incl_db=False)
     return config.FLUSH + make_key(key, with_locale=False)
 
 
@@ -79,16 +79,24 @@ def safe_redis(return_type):
 
 class Invalidator(object):
 
-    def invalidate_keys(self, keys):
-        """Invalidate all the flush lists named by the list of ``keys``."""
-        if not keys:
+    def invalidate_objects(self, objects, is_new_instance=False, model_cls=None):
+        """Invalidate all the flush lists for the given ``objects``."""
+        obj_keys = [k for o in objects for k in o._cache_keys()]
+        flush_keys = [k for o in objects for k in o._flush_keys()]
+        # If whole-model invalidation on create is enabled, include this model's
+        # key in the list to be invalidated. Note that the key itself won't
+        # contain anything in the cache, but its corresponding flush key will.
+        if (config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL and
+           is_new_instance and model_cls and hasattr(model_cls, 'model_flush_key')):
+            flush_keys.append(model_cls.model_flush_key())
+        if not obj_keys or not flush_keys:
             return
-        obj_keys, flush_keys = self.find_flush_lists(keys)
+        obj_keys, flush_keys = self.expand_flush_lists(obj_keys, flush_keys)
         if obj_keys:
-            log.debug('obj_keys: %s' % obj_keys)
+            log.debug('deleting object keys: %s' % obj_keys)
             cache.delete_many(obj_keys)
         if flush_keys:
-            log.debug('flush_keys: %s' % flush_keys)
+            log.debug('clearing flush lists: %s' % flush_keys)
             self.clear_flush_lists(flush_keys)
 
     def cache_objects(self, model, objects, query_key, query_flush):
@@ -103,13 +111,13 @@ class Invalidator(object):
             flush_lists[key].add(query_flush)
         flush_lists[query_flush].add(query_key)
         # Add this query to the flush key for the entire model, if enabled
-        model_flush = flush_key(model.model_key())
+        model_flush = model.model_flush_key()
         if config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL:
             flush_lists[model_flush].add(query_key)
         # Add each object to the flush lists of its foreign keys.
         for obj in objects:
             obj_flush = obj.flush_key()
-            for key in map(flush_key, obj._cache_keys()):
+            for key in obj._flush_keys():
                 if key not in (obj_flush, model_flush):
                     log.debug('related: adding %s to %s' % (obj_flush, key))
                     flush_lists[key].add(obj_flush)
@@ -117,15 +125,16 @@ class Invalidator(object):
                     flush_lists[key].add(byid(obj))
         self.add_to_flush_list(flush_lists)
 
-    def find_flush_lists(self, keys):
+    def expand_flush_lists(self, obj_keys, flush_keys):
         """
         Recursively search for flush lists and objects to invalidate.
 
         The search starts with the lists in `keys` and expands to any flush
         lists found therein.  Returns ({objects to flush}, {flush keys found}).
         """
-        objs = set(keys)
-        search_keys = keys = set(map(flush_key, keys))
+        log.debug('in expand_flush_lists')
+        obj_keys = set(obj_keys)
+        search_keys = flush_keys = set(flush_keys)
 
         # Add other flush keys from the lists, which happens when a parent
         # object includes a foreign key.
@@ -135,13 +144,13 @@ class Invalidator(object):
                 if key.startswith(config.FLUSH):
                     new_keys.add(key)
                 else:
-                    objs.add(key)
+                    obj_keys.add(key)
             if new_keys:
                 log.debug('search for %s found keys %s' % (search_keys, new_keys))
-                keys.update(new_keys)
+                flush_keys.update(new_keys)
                 search_keys = new_keys
             else:
-                return objs, keys
+                return obj_keys, flush_keys
 
     def add_to_flush_list(self, mapping):
         """Update flush lists with the {flush_key: [query_key,...]} map."""
