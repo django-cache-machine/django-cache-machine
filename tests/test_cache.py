@@ -13,6 +13,7 @@ if six.PY3:
 else:
     import mock
 from nose.tools import eq_
+from nose.plugins.skip import SkipTest
 
 from caching import base, invalidation, config, compat
 from .testapp.models import Addon, User
@@ -404,6 +405,17 @@ class CachingTestCase(TestCase):
         a = q.get()
         assert hasattr(a, 'from_cache')
         eq_(a.id, 1)
+
+    @mock.patch('memcache.Client.set')
+    def test_infinite_timeout(self, mock_set):
+        """
+        Test that memcached infinite timeouts work with all Django versions.
+        """
+        if not any(['memcache' in c['BACKEND'] for c in settings.CACHES.values()]):
+            raise SkipTest('This test requires that Django use memcache')
+        cache.set('foo', 'bar', timeout=compat.FOREVER)
+        # for memcached, 0 timeout means store forever
+        mock_set.assert_called_with(':1:foo', 'bar', 0)
 
     def test_cache_and_no_cache(self):
         """Whatever happens last sticks."""
