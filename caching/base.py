@@ -253,6 +253,9 @@ class CachingMixin(object):
 
     def get_cache_key(self, incl_db=True):
         """Return a cache key based on the object's primary key."""
+        # incl_db will be False if this key is intended for use in a flush key.
+        # This ensures all cached copies of an object will be invalidated
+        # regardless of the DB on which they're modified/deleted.
         return self._cache_key(self.pk, incl_db and self._state.db or None)
     cache_key = property(get_cache_key)
 
