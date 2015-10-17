@@ -3,6 +3,17 @@
 Release Notes
 ==================
 
+v0.9.1 (TBD)
+-----------------
+
+- Fix bug that prevented objects retrieved via cache machine from being
+  re-cached by application code (see PR #103)
+- Fix bug that prevented caching objects forever when using Django <= 1.5
+  (see PR #104)
+- Fix regression (introduced in 0.8) that broke invalidation when an object
+  was cached via a slave database and later modified or deleted via the
+  master database, when using master/slave replication (see PR #105)
+
 v0.9 (2015-07-29)
 -----------------
 
