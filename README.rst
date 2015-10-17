@@ -7,7 +7,7 @@ through the ORM.
 
 For full docs, see https://cache-machine.readthedocs.org/en/latest/.
 
-.. image:: https://travis-ci.org/django-cache-machine/django-cache-machine.png
+.. image:: https://travis-ci.org/django-cache-machine/django-cache-machine.svg?branch=master
   :target: https://travis-ci.org/django-cache-machine/django-cache-machine
 
 .. image:: https://coveralls.io/repos/django-cache-machine/django-cache-machine/badge.svg?branch=master
