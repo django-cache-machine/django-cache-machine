@@ -28,6 +28,10 @@ class Addon(CachingMixin, models.Model):
 
     objects = CachingManager()
 
+    class Meta:
+        # without this, Postgres & SQLite return objects in different orders:
+        ordering = ('pk',)
+
     @cached_method
     def calls(self, arg=1):
         """This is a docstring for calls()"""

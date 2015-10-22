@@ -1,3 +1,5 @@
+import os
+
 CACHES = {
     'default': {
         'BACKEND': 'caching.backends.memcached.MemcachedCache',
@@ -9,12 +11,22 @@ TEST_RUNNER = 'django_nose.runner.NoseTestSuiteRunner'
 
 DATABASES = {
     'default': {
-        'NAME': ':memory:',
-        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.environ.get('TRAVIS') and 'travis_ci_test' or 'cache_machine_devel',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
     },
     'slave': {
-        'NAME': 'test_slave.db',
-        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'cache_machine_devel',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'TEST_MIRROR': 'default',  # support older Django syntax for now
+    },
+    'master2': {
+        'NAME': os.environ.get('TRAVIS') and 'travis_ci_test2' or 'cache_machine_devel2',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    },
+    'slave2': {
+        'NAME': 'cache_machine_devel2',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'TEST_MIRROR': 'master2',  # support older Django syntax for now
     },
 }
 

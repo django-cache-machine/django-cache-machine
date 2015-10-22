@@ -49,16 +49,7 @@ class CachingManager(models.Manager):
 
     def invalidate(self, *objects, **kwargs):
         """Invalidate all the flush lists associated with ``objects``."""
-        keys = [k for o in objects for k in o._cache_keys()]
-        # If whole-model invalidation on create is enabled, include this model's
-        # key in the list to be invalidated. Note that the key itself won't
-        # contain anything in the cache, but its corresponding flush key will.
-        is_new_instance = kwargs.pop('is_new_instance', False)
-        model_cls = kwargs.pop('model_cls', None)
-        if (config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL and
-           is_new_instance and model_cls and hasattr(model_cls, 'model_key')):
-            keys.append(model_cls.model_key())
-        invalidator.invalidate_keys(keys)
+        invalidator.invalidate_objects(objects, **kwargs)
 
     def raw(self, raw_query, params=None, *args, **kwargs):
         return CachingRawQuerySet(raw_query, self.model, params=params,
@@ -107,7 +98,7 @@ class CacheMachine(object):
         # Try to fetch from the cache.
         cached = cache.get(query_key)
         if cached is not None:
-            log.debug('cache hit: %s' % self.query_string)
+            log.debug('cache hit: %s' % query_key)
             for obj in cached:
                 obj.from_cache = True
                 yield obj
@@ -125,13 +116,14 @@ class CacheMachine(object):
                 yield obj
         except StopIteration:
             if to_cache or config.CACHE_EMPTY_QUERYSETS:
-                self.cache_objects(to_cache)
+                self.cache_objects(to_cache, query_key)
             raise
 
-    def cache_objects(self, objects):
+    def cache_objects(self, objects, query_key):
         """Cache query_key => objects, then update the flush lists."""
-        query_key = self.query_key()
+        log.debug('query_key: %s' % query_key)
         query_flush = flush_key(self.query_string)
+        log.debug('query_flush: %s' % query_flush)
         cache.add(query_key, objects, timeout=self.timeout)
         invalidator.cache_objects(self.model, objects, query_key, query_flush)
 
@@ -259,38 +251,48 @@ class CachingMixin(object):
     def flush_key(self):
         return flush_key(self)
 
-    @property
-    def cache_key(self):
+    def get_cache_key(self, incl_db=True):
         """Return a cache key based on the object's primary key."""
-        return self._cache_key(self.pk, self._state.db)
+        # incl_db will be False if this key is intended for use in a flush key.
+        # This ensures all cached copies of an object will be invalidated
+        # regardless of the DB on which they're modified/deleted.
+        return self._cache_key(self.pk, incl_db and self._state.db or None)
+    cache_key = property(get_cache_key)
 
     @classmethod
-    def model_key(cls):
+    def model_flush_key(cls):
         """
         Return a cache key for the entire model (used by invalidation).
         """
         # use dummy PK and DB reference that will never resolve to an actual
-        # cache key for an objection
-        return cls._cache_key('all-pks', 'all-dbs')
+        # cache key for an object
+        return flush_key(cls._cache_key('all-pks', 'all-dbs'))
 
     @classmethod
-    def _cache_key(cls, pk, db):
+    def _cache_key(cls, pk, db=None):
         """
         Return a string that uniquely identifies the object.
 
         For the Addon class, with a pk of 2, we get "o:addons.addon:2".
         """
-        key_parts = ('o', cls._meta, pk, db)
+        if db:
+            key_parts = ('o', cls._meta, pk, db)
+        else:
+            key_parts = ('o', cls._meta, pk)
         return ':'.join(map(encoding.smart_text, key_parts))
 
-    def _cache_keys(self):
+    def _cache_keys(self, incl_db=True):
         """Return the cache key for self plus all related foreign keys."""
         fks = dict((f, getattr(self, f.attname)) for f in self._meta.fields
                    if isinstance(f, models.ForeignKey))
-
-        keys = [fk.rel.to._cache_key(val, self._state.db) for fk, val in list(fks.items())
+        keys = [fk.rel.to._cache_key(val, incl_db and self._state.db or None)
+                for fk, val in list(fks.items())
                 if val is not None and hasattr(fk.rel.to, '_cache_key')]
-        return (self.cache_key,) + tuple(keys)
+        return (self.get_cache_key(incl_db=incl_db),) + tuple(keys)
+
+    def _flush_keys(self):
+        """Return the flush key for self plus all related foreign keys."""
+        return map(flush_key, self._cache_keys(incl_db=False))
 
 
 class CachingRawQuerySet(models.query.RawQuerySet):
