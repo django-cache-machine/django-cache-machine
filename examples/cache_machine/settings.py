@@ -15,9 +15,18 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
     },
     'slave': {
-        'NAME': 'cache_machine_devel_slave',
+        'NAME': 'cache_machine_devel',
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'TEST_MIRROR': 'default',  # support older Django syntax for now
+    },
+    'master2': {
+        'NAME': os.environ.get('TRAVIS') and 'travis_ci_test2' or 'cache_machine_devel2',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    },
+    'slave2': {
+        'NAME': 'cache_machine_devel2',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'TEST_MIRROR': 'master2',  # support older Django syntax for now
     },
 }
 
