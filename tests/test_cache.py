@@ -602,8 +602,9 @@ class MultiDbTestCase(TransactionTestCase):
         """ Test for no invalidation when sharding w/distinct PKs"""
         master_obj = User.objects.using('default').create(name='new-test-user')
         # if pks are the same, objects *will* be invalidated across DBs
-        master_obj2 = User.objects.using('master2').create(pk=master_obj.pk+1, name='other-test-user')
-                # prime the cache for the default DB
+        master_obj2 = User.objects.using('master2').create(pk=master_obj.pk+1,
+                                                           name='other-test-user')
+        # prime the cache for the default DB
         master_obj = User.objects.using('default').get(name='new-test-user')
         assert master_obj.from_cache is False
         master_obj = User.objects.using('default').get(name='new-test-user')
