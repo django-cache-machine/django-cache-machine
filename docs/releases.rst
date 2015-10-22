@@ -3,7 +3,7 @@
 Release Notes
 ==================
 
-v0.9.1 (TBD)
+v0.9.1 (2015-10-22)
 -----------------
 
 - Fix bug that prevented objects retrieved via cache machine from being
@@ -12,7 +12,9 @@ v0.9.1 (TBD)
   (see PR #104)
 - Fix regression (introduced in 0.8) that broke invalidation when an object
   was cached via a slave database and later modified or deleted via the
-  master database, when using master/slave replication (see PR #105)
+  master database, when using master/slave replication (see PR #105). Note
+  this change may cause unexpected invalidation when sharding across DBs
+  that share both a schema and primary key values or other attributes.
 
 v0.9 (2015-07-29)
 -----------------
