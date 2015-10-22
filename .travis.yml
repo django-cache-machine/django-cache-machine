@@ -10,6 +10,11 @@ python:
   - "2.7"
   - "3.3"
   - "3.4"
+addons:
+  postgresql: "9.4"
+before_script:
+  - psql -c 'create database travis_ci_test;' -U postgres
+  - psql -c 'create database travis_ci_test2;' -U postgres
 install:
   - pip install -U pip  # make sure we have the latest version
   - pip install -e .
