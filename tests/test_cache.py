@@ -597,24 +597,3 @@ class MultiDbTestCase(TransactionTestCase):
         assert master_obj2.from_cache is True
         # ensure no crossover between databases
         assert master_obj.name != master_obj2.name
-
-    def test_multidb_sharding_no_invalidation(self):
-        """ Test for no invalidation when sharding w/distinct PKs"""
-        master_obj = User.objects.using('default').create(name='new-test-user')
-        # if pks are the same, objects *will* be invalidated across DBs
-        master_obj2 = User.objects.using('master2').create(pk=master_obj.pk+1,
-                                                           name='other-test-user')
-        # prime the cache for the default DB
-        master_obj = User.objects.using('default').get(name='new-test-user')
-        assert master_obj.from_cache is False
-        master_obj = User.objects.using('default').get(name='new-test-user')
-        assert master_obj.from_cache is True
-        # prime the cache for the 2nd master DB
-        master_obj2 = User.objects.using('master2').get(name='other-test-user')
-        assert master_obj2.from_cache is False
-        master_obj2 = User.objects.using('master2').get(name='other-test-user')
-        assert master_obj2.from_cache is True
-        # make sure master_obj2 query is not invalidated by a change to the 'default' db
-        master_obj.save()
-        master_obj2 = User.objects.using('master2').get(name='other-test-user')
-        assert master_obj2.from_cache is True
