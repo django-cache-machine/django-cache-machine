@@ -141,7 +141,7 @@ class Invalidator(object):
         while 1:
             new_keys = set()
             for key in self.get_flush_lists(search_keys):
-                if key.startswith(config.FLUSH):
+                if key.startswith(config.FLUSH) and key not in flush_keys:
                     new_keys.add(key)
                 else:
                     obj_keys.add(key)
