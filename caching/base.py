@@ -38,6 +38,8 @@ class CachingManager(models.Manager):
     def contribute_to_class(self, cls, name):
         signals.post_save.connect(self.post_save, sender=cls)
         signals.post_delete.connect(self.post_delete, sender=cls)
+        for m2m in cls._meta.many_to_many:
+            signals.m2m_changed.connect(self.m2m_changed, sender=m2m.rel.through)
         return super(CachingManager, self).contribute_to_class(cls, name)
 
     def post_save(self, instance, **kwargs):
@@ -47,9 +49,43 @@ class CachingManager(models.Manager):
     def post_delete(self, instance, **kwargs):
         self.invalidate(instance)
 
+    def m2m_changed(self, action, sender, **kwargs):
+        if action.startswith('post_'):
+            self.invalidate(model=sender)
+
+    def bulk_create(self, *args, **kwargs):
+        result = super(CachingManager, self).bulk_create(*args, **kwargs)
+        self.invalidate()
+        return result
+
     def invalidate(self, *objects, **kwargs):
-        """Invalidate all the flush lists associated with ``objects``."""
-        invalidator.invalidate_objects(objects, **kwargs)
+        """Invalidate the root key associated with the model class."""
+        base_model = kwargs.get('model') or self.model
+        log.debug('CacheMachine: Invalidating {}'.format(base_model))
+
+        models_to_clear = getattr(base_model, '__caching_related_models_to_clear', None)
+        if models_to_clear is None:
+            # Also invalidate related models, because their cached queries might include related lookups to this model.
+            models_to_clear = [base_model]
+            i = 0
+            while i < len(models_to_clear):
+                model = models_to_clear[i]
+                i += 1
+                for f in model._meta.fields:
+                    if f.rel and issubclass(f.rel.to, CachingMixin) and f.rel.to not in models_to_clear:
+                        models_to_clear.append(f.rel.to)
+                for f in model._meta.many_to_many:
+                    if issubclass(f.rel.to, CachingMixin) and f.rel.to not in models_to_clear:
+                        models_to_clear.append(f.rel.to)
+                    if issubclass(f.rel.through, CachingMixin) and f.rel.through not in models_to_clear:
+                        models_to_clear.append(f.rel.through)
+
+            # Cache the models list (using a class variable, not Django's cache!).
+            base_model.__caching_related_models_to_clear = models_to_clear
+
+        # Clear caches.
+        for m in models_to_clear:
+            cache_clear_root(m)
 
     def raw(self, raw_query, params=None, *args, **kwargs):
         return CachingRawQuerySet(raw_query, self.model, params=params,
