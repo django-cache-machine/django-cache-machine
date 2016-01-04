@@ -1,5 +1,4 @@
 from importlib import import_module
-from pprint import pprint
 
 from django.apps import AppConfig, apps
 from django.db.models.manager import Manager
@@ -91,7 +90,7 @@ class CacheMachineConfig(AppConfig):
             if ModelManager == Manager:
                 model_manager.__class__ = CachingManager
 
-            elif not any(issubclass(Base, CachingManager) for Base in getattr(Model, manager_name).__class__.__bases__):
+            elif not any(issubclass(Base, CachingManager) for Base in ModelManager.__bases__):
                 # Dynamically create a new type of manager with a CachingManager
                 # mixin and swap the model's manager's *type* out for it
                 new_bases = (CachingManager,) + ModelManager.__bases__
