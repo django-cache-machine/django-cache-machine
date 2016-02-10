@@ -414,8 +414,8 @@ class CachingTestCase(TestCase):
         self.assertEqual(a.id, 1)
 
     @unittest.skipUnless(
-            any(['memcache' in c['BACKEND'] for c in settings.CACHES.values()]),
-            'This test requires that Django use memcache')
+        any(['memcache' in c['BACKEND'] for c in settings.CACHES.values()]),
+        'This test requires that Django use memcache')
     @mock.patch('memcache.Client.set')
     def test_infinite_timeout(self, mock_set):
         """

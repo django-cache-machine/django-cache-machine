@@ -22,7 +22,7 @@ install:
   - pip install coveralls
 script:
   - python run_tests.py --with-coverage
-  - flake8 .
+  - flake8 --ignore=E731,E402 .
 after_success:
   - coveralls
 env:
