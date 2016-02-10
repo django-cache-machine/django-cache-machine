@@ -569,7 +569,7 @@ class CachingTestCase(TestCase):
                 result = list(Addon.objects.filter(val__gt=130).values('val', 'author1'))
                 self.assertEqual(len(result), 2)
                 self.assertIsInstance(result[0], dict)
-                self.assertSetEqual({'val', 'author1'}, set(result[0]))
+                self.assertSetEqual(set(('val', 'author1')), set(result[0]))
 
     def test_no_cache_values_list(self):
         u1 = User.objects.create()
