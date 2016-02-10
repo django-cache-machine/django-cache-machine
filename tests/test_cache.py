@@ -556,6 +556,31 @@ class CachingTestCase(TestCase):
             q2 = pickle.loads(pickled)
             self.assertEqual(q2.timeout, 10)
 
+    def test_no_cache_values(self):
+        u1 = User.objects.create()
+        u2 = User.objects.create()
+        Addon.objects.create(val=130, author1=u1, author2=u1)
+        Addon.objects.create(val=131, author1=u1, author2=u2)
+        Addon.objects.create(val=132, author1=u2, author2=u2)
+        for k in (1, 1):
+            with self.assertNumQueries(k):
+                result = list(Addon.objects.filter(val__gt=130).values('val', 'author1'))
+                self.assertEqual(len(result), 2)
+                self.assertIsInstance(result[0], dict)
+                self.assertSetEqual({'val', 'author1'}, set(result[0]))
+
+    def test_no_cache_values_list(self):
+        u1 = User.objects.create()
+        u2 = User.objects.create()
+        Addon.objects.create(val=130, author1=u1, author2=u1)
+        Addon.objects.create(val=131, author1=u1, author2=u2)
+        Addon.objects.create(val=132, author1=u2, author2=u2)
+        for k in (1, 1):
+            with self.assertNumQueries(k):
+                result = list(Addon.objects.filter(val__gt=130).values_list('val', 'author1'))
+                self.assertEqual(len(result), 2)
+                self.assertIsInstance(result[0], tuple)
+
 
 # use TransactionTestCase so that ['TEST']['MIRROR'] setting works
 # see https://code.djangoproject.com/ticket/23718
