@@ -30,6 +30,7 @@ SETTINGS = (
     'custom_backend',
     'redis_settings',
     'redis_byid',
+    'django_redis_settings',
 )
 
 
