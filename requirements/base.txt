@@ -1,6 +1,7 @@
 # These are the reqs to build docs and run tests.
 sphinx
 django-nose
+django-redis
 jinja2
 redis
 flake8
