@@ -87,7 +87,9 @@ class CacheMachine(object):
         cross DB model saving among related objects.
         """
         query_db_string = 'qs:%s::db:%s' % (self.query_string, self.db)
-        return make_key(query_db_string, with_locale=False)
+        key = make_key(query_db_string, with_locale=False)
+        log.debug('Key: {} Query: {}'.format(key, self.query_string))
+        return key
 
     def __iter__(self):
         try:
@@ -103,6 +105,8 @@ class CacheMachine(object):
                 obj.from_cache = True
                 yield obj
             return
+        else:
+            log.debug('cache miss: %s' % query_key)
 
         # Do the database query, cache it once we have all the objects.
         iterator = self.iter_function()
