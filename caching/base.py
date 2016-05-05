@@ -88,7 +88,7 @@ class CacheMachine(object):
         """
         query_db_string = 'qs:%s::db:%s' % (self.query_string, self.db)
         key = make_key(query_db_string, with_locale=False)
-        log.debug('Key: {} Query: {}'.format(key, self.query_string))
+        log.debug('Key: {0} Query: {1}'.format(key, self.query_string))
         return key
 
     def __iter__(self):
