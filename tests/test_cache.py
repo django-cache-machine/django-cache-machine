@@ -9,15 +9,16 @@ from django.conf import settings
 from django.test import TestCase, TransactionTestCase
 from django.utils import translation, encoding, six
 
-if six.PY3:
-    from unittest import mock
-else:
-    import mock
 from nose.tools import eq_
 from nose.plugins.skip import SkipTest
 
 from caching import base, invalidation, config, compat
 from .testapp.models import Addon, User
+
+if six.PY3:
+    from unittest import mock
+else:
+    import mock
 
 cache = invalidation.cache
 log = logging.getLogger(__name__)
@@ -308,7 +309,9 @@ class CachingTestCase(TestCase):
             return counter.call_count
 
         a = Addon.objects.get(id=1)
-        f = lambda: base.cached_with(a, expensive, 'key')
+
+        def f():
+            return base.cached_with(a, expensive, 'key')
 
         # Only gets called once.
         eq_(f(), 1)
@@ -328,7 +331,9 @@ class CachingTestCase(TestCase):
 
         counter.reset_mock()
         q = Addon.objects.filter(id=1)
-        f = lambda: base.cached_with(q, expensive, 'key')
+
+        def f():
+            return base.cached_with(q, expensive, 'key')
 
         # Only gets called once.
         eq_(f(), 1)
@@ -355,7 +360,10 @@ class CachingTestCase(TestCase):
         obj = mock.Mock()
         obj.query_key.return_value = 'xxx'
         obj.flush_key.return_value = 'key'
-        f = lambda: 1
+
+        def f():
+            return 1
+
         eq_(base.cached_with(obj, f, 'adf:%s' % u), 1)
 
     def test_cached_method(self):
