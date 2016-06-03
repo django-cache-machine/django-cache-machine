@@ -308,7 +308,7 @@ class CachingTestCase(TestCase):
             return counter.call_count
 
         a = Addon.objects.get(id=1)
-        f = lambda: base.cached_with(a, expensive, 'key')
+        def f(): return base.cached_with(a, expensive, 'key')
 
         # Only gets called once.
         eq_(f(), 1)
@@ -328,7 +328,7 @@ class CachingTestCase(TestCase):
 
         counter.reset_mock()
         q = Addon.objects.filter(id=1)
-        f = lambda: base.cached_with(q, expensive, 'key')
+        def f(): return base.cached_with(q, expensive, 'key')
 
         # Only gets called once.
         eq_(f(), 1)
@@ -355,7 +355,7 @@ class CachingTestCase(TestCase):
         obj = mock.Mock()
         obj.query_key.return_value = 'xxx'
         obj.flush_key.return_value = 'key'
-        f = lambda: 1
+        def f(): return 1
         eq_(base.cached_with(obj, f, 'adf:%s' % u), 1)
 
     def test_cached_method(self):
