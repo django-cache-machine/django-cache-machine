@@ -226,7 +226,7 @@ def parse_backend_uri(backend_uri):
     host = rest
     qpos = rest.find('?')
     if qpos != -1:
-        params = dict(parse_qsl(rest[qpos+1:]))
+        params = dict(parse_qsl(rest[qpos + 1:]))
         host = rest[:qpos]
     else:
         params = {}
