@@ -10,6 +10,7 @@ python:
   - "2.7"
   - "3.3"
   - "3.4"
+  - "3.5"
 addons:
   postgresql: "9.4"
 before_script:
@@ -31,15 +32,30 @@ env:
   - DJANGO_SPEC="Django>=1.6,<1.7"
   - DJANGO_SPEC="Django>=1.7,<1.8"
   - DJANGO_SPEC="Django>=1.8,<1.9"
+  - DJANGO_SPEC="Django==1.9b1"
 matrix:
   exclude:
     - python: "2.6"
       env: DJANGO_SPEC="Django>=1.7,<1.8"
     - python: "2.6"
       env: DJANGO_SPEC="Django>=1.8,<1.9"
+    - python: "2.6"
+      env: DJANGO_SPEC="Django==1.9b1"
     - python: "3.3"
       env: DJANGO_SPEC="Django>=1.4,<1.5"
+    - python: "3.3"
+      env: DJANGO_SPEC="Django1.9b1"
     - python: "3.4"
       env: DJANGO_SPEC="Django>=1.4,<1.5"
+    - python: "3.5"
+      env: DJANGO_SPEC="Django>=1.4,<1.5"
+    - python: "3.5"
+      env: DJANGO_SPEC="Django>=1.5,<1.6"
+    - python: "3.5"
+      env: DJANGO_SPEC="Django>=1.6,<1.7"
+    - python: "3.5"
+      env: DJANGO_SPEC="Django>=1.7,<1.8"
+    - python: "3.5"
+      env: DJANGO_SPEC="Django>=1.8,<1.9"
 # Adding sudo: False tells Travis to use their container-based infrastructure, which is somewhat faster.
 sudo: False
