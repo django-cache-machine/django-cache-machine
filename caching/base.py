@@ -388,7 +388,7 @@ class MethodWrapper(object):
         self.cache = {}
 
     def __call__(self, *args, **kwargs):
-        k = lambda o: o.cache_key if hasattr(o, 'cache_key') else o
+        def k(o): return o.cache_key if hasattr(o, 'cache_key') else o
         arg_keys = list(map(k, args))
         kwarg_keys = [(key, k(val)) for key, val in list(kwargs.items())]
         key_parts = ('m', self.obj.cache_key, self.func.__name__,

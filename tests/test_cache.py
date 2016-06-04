@@ -1,28 +1,27 @@
 from __future__ import unicode_literals
+import django
+import jinja2
 import logging
 import pickle
 import sys
+
+from django.conf import settings
+from django.test import TestCase, TransactionTestCase
+from django.utils import translation, encoding
+
+from caching import base, invalidation, config, compat
+
+from .testapp.models import Addon, User
 
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
     import unittest
 
-import django
-from django.conf import settings
-from django.test import TestCase, TransactionTestCase
-from django.utils import translation, encoding
-
 if sys.version_info >= (3, ):
     from unittest import mock
 else:
     import mock
-
-import jinja2
-
-from caching import base, invalidation, config, compat
-
-from .testapp.models import Addon, User
 
 
 cache = invalidation.cache
@@ -314,7 +313,8 @@ class CachingTestCase(TestCase):
             return counter.call_count
 
         a = Addon.objects.get(id=1)
-        f = lambda: base.cached_with(a, expensive, 'key')
+
+        def f(): return base.cached_with(a, expensive, 'key')
 
         # Only gets called once.
         self.assertEqual(f(), 1)
@@ -334,7 +334,8 @@ class CachingTestCase(TestCase):
 
         counter.reset_mock()
         q = Addon.objects.filter(id=1)
-        f = lambda: base.cached_with(q, expensive, 'key')
+
+        def f(): return base.cached_with(q, expensive, 'key')
 
         # Only gets called once.
         self.assertEqual(f(), 1)
@@ -361,7 +362,8 @@ class CachingTestCase(TestCase):
         obj = mock.Mock()
         obj.query_key.return_value = 'xxx'
         obj.flush_key.return_value = 'key'
-        f = lambda: 1
+
+        def f(): return 1
         self.assertEqual(base.cached_with(obj, f, 'adf:%s' % u), 1)
 
     def test_cached_method(self):
