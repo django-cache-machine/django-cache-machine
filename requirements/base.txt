@@ -2,6 +2,7 @@
 --no-binary :all:  # workaround for https://bitbucket.org/ned/coveragepy/issue/382/pip-install-coverage-uses-slower-pytracer
 sphinx
 django-nose
+django-redis
 jinja2
 redis
 flake8
