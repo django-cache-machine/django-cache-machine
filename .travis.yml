@@ -17,7 +17,6 @@ install:
   - pip install coveralls
 script:
   - tox -e $TOX_ENV
-  - flake8
 after_success:
   - coveralls
 env:
