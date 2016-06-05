@@ -13,6 +13,49 @@ from caching import config
 from .compat import DEFAULT_TIMEOUT
 from .invalidation import invalidator, flush_key, make_key, byid, cache
 
+try:
+from mptt.managers import TreeManager
+
+class CachingMpttManager(TreeManager):
+
+    # Tell Django to use this manager when resolving foreign keys.
+    use_for_related_fields = True
+
+    def get_queryset(self):
+        return CachingQuerySet(self.model, using=self._db)
+
+    if django.VERSION < (1, 6):
+        get_query_set = get_queryset
+
+    def contribute_to_class(self, cls, name):
+        signals.post_save.connect(self.post_save, sender=cls)
+        signals.post_delete.connect(self.post_delete, sender=cls)
+        return super(CachingMpttManager, self).contribute_to_class(cls, name)
+
+    def post_save(self, instance, **kwargs):
+        self.invalidate(instance, is_new_instance=kwargs['created'],
+                        model_cls=kwargs['sender'])
+
+    def post_delete(self, instance, **kwargs):
+        self.invalidate(instance)
+
+    def invalidate(self, *objects, **kwargs):
+        """Invalidate all the flush lists associated with ``objects``."""
+        invalidator.invalidate_objects(objects, **kwargs)
+
+    def raw(self, raw_query, params=None, *args, **kwargs):
+        return CachingRawQuerySet(raw_query, self.model, params=params,
+                                  using=self._db, *args, **kwargs)
+
+    def cache(self, timeout=DEFAULT_TIMEOUT):
+        return self.get_queryset().cache(timeout)
+
+    def no_cache(self):
+        return self.cache(config.NO_CACHE)
+
+except:
+    pass
+
 
 class NullHandler(logging.Handler):
 
@@ -22,6 +65,8 @@ class NullHandler(logging.Handler):
 
 log = logging.getLogger('caching')
 log.addHandler(NullHandler())
+
+
 
 
 class CachingManager(models.Manager):
