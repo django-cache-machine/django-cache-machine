@@ -31,6 +31,58 @@ or `github <http://github.com/django-cache-machine/django-cache-machine>`_::
 
     pip install -e git://github.com/django-cache-machine/django-cache-machine.git#egg=django-cache-machine
 
+then add ``caching`` to your ``INSTALLED_APPS``.
+
+
+Configuration
+-------------
+
+To use Cache Machine with your own models, subclass from
+``caching.base.CachingMixin`` and use or subclass
+``caching.base.CachingManager`` for your manager instance.
+
+To use Cache Machine with arbitrary models specify the import string with the
+``CACHE_MACHINE_MODELS`` setting. This can also be used to register models
+automatically generated from``ManyToManyField``s by specifying the ``through``
+attribute on the ManyToManyField directly.
+
+Example:
+~~~~~~~~
+
+``yourapp/models.py``:
+
+    from django.db import models
+
+    class Thing(models.Model):
+        others = models.ManyToManyField('self')
+
+
+``anotherapp/models.py``:
+
+    from django.db import models
+
+    class OtherThing(models.Model):
+        # ...
+
+        objects = models.Manager()
+
+
+``settings.py``:
+
+    CACHE_MACHINE_MODELS = {
+        # Cache the automatically generated intermediate model for the ManyToManyField
+        'yourapp.models.Thing.others.through': {},
+
+        # Cache a model from another app
+        'anotherapp.models.OtherThing': {
+            # Options dictionary
+        }
+    }
+
+Right now the only available option is ``manager_name``, which you can use to
+cache only certain managers. This option defaults to ``objects``, so it can be
+safely omitted in almost all cases.
+
 
 Running Tests
 -------------

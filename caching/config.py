@@ -11,6 +11,7 @@ TIMEOUT = getattr(settings, 'CACHE_COUNT_TIMEOUT', NO_CACHE)
 CACHE_INVALIDATE_ON_CREATE = getattr(settings, 'CACHE_INVALIDATE_ON_CREATE', None)
 CACHE_MACHINE_NO_INVALIDATION = getattr(settings, 'CACHE_MACHINE_NO_INVALIDATION', False)
 CACHE_MACHINE_USE_REDIS = getattr(settings, 'CACHE_MACHINE_USE_REDIS', False)
+CACHE_MACHINE_MODELS = getattr(settings, 'CACHE_MACHINE_MODELS', {})
 
 _invalidate_on_create_values = (None, WHOLE_MODEL)
 if CACHE_INVALIDATE_ON_CREATE not in _invalidate_on_create_values:
