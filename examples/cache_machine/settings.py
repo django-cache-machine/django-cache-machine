@@ -18,6 +18,10 @@ DATABASES = {
         'NAME': 'cache_machine_devel',
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'TEST_MIRROR': 'default',  # support older Django syntax for now
+        # Newer Django syntax
+        'TEST': {
+            'MIRROR': 'default',
+        },
     },
     'master2': {
         'NAME': os.environ.get('TRAVIS') and 'travis_ci_test2' or 'cache_machine_devel2',
@@ -27,6 +31,10 @@ DATABASES = {
         'NAME': 'cache_machine_devel2',
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'TEST_MIRROR': 'master2',  # support older Django syntax for now
+        # Newer Django syntax
+        'TEST': {
+            'MIRROR': 'master2',
+        },
     },
 }
 
