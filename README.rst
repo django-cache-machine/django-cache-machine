@@ -23,11 +23,15 @@ Cache Machine works with Django 1.4-1.8 and Python 2.6, 2.7, 3.3 and 3.4.
 Installation
 ------------
 
-Get it from `pypi <http://pypi.python.org/pypi/django-cache-machine>`_::
+Get it from `pypi <http://pypi.python.org/pypi/django-cache-machine>`_:
+
+.. code-block:: bash
 
     pip install django-cache-machine
 
-or `github <http://github.com/django-cache-machine/django-cache-machine>`_::
+or `github <http://github.com/django-cache-machine/django-cache-machine>`_:
+
+.. code-block:: bash
 
     pip install -e git://github.com/django-cache-machine/django-cache-machine.git#egg=django-cache-machine
 
@@ -35,7 +39,9 @@ or `github <http://github.com/django-cache-machine/django-cache-machine>`_::
 Running Tests
 -------------
 
-Get it from `github <http://github.com/django-cache-machine/django-cache-machine>`_::
+Get it from `github <http://github.com/django-cache-machine/django-cache-machine>`_:
+
+.. code-block:: bash
 
     git clone git://github.com/django-cache-machine/django-cache-machine.git
     cd django-cache-machine
