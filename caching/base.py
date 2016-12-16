@@ -176,6 +176,16 @@ class CachingQuerySet(models.query.QuerySet):
                 iterator = self.fetch_by_id
             return iter(CacheMachine(self.model, query_string, iterator, self.timeout, db=self.db))
 
+    def update(self, **kwargs):
+        """
+        Override the update method to invalidate all entities in the query set
+        on an update.
+        """
+        result = super(CachingQuerySet, self).update(**kwargs)
+        self.model.objects.invalidate(*self.iterator())
+
+        return result
+
     def fetch_by_id(self):
         """
         Run two queries to get objects: one for the ids, one for id__in=ids.
