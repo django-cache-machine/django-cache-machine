@@ -17,17 +17,9 @@ except ImportError:
     ValuesListIterable = None
 
 from caching import config
-from .invalidation import invalidator, flush_key, make_key, byid, cache
-
-
-class NullHandler(logging.Handler):
-
-    def emit(self, record):
-        pass
-
+from caching.invalidation import invalidator, flush_key, make_key, byid, cache
 
 log = logging.getLogger('caching')
-log.addHandler(NullHandler())
 
 
 class CachingManager(models.Manager):

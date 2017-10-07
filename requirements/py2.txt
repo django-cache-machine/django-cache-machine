@@ -1,4 +1,2 @@
 -r base.txt
-python-memcached
 mock==1.0.1
-unittest2

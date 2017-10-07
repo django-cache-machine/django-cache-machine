@@ -14,9 +14,8 @@ affect you, please see the :ref:`release-notes`.
 Settings
 --------
 
-Older versions of Cache Machine required you to use customized cache backends. As of Django 1.6,
-these are no longer needed and they have been removed from Cache Machine. Use the standard Django
-cache backends.
+Older versions of Cache Machine required you to use customized cache backends. These are no longer
+needed and they have been removed from Cache Machine. Use the standard Django cache backends.
 
 COUNT queries
 ^^^^^^^^^^^^^

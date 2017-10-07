@@ -3,8 +3,27 @@
 Release Notes
 ==================
 
+v1.0.0dev (TBD)
+---------------
+
+- Update Travis and Tox configurations
+- Drop support for Python < 2.7
+- Add support for Python 3.5 and 3.6
+- Drop support for Django < 1.8
+- Add support for Django 1.9, 1.10, and 1.11
+- Removed all custom cache backends.
+- Flake8 fixes
+
+Backwards Incompatible Changes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Cache Machine previously included custom backends for LocMem, Memcached and PyLibMemcached. These
+  were necessary because the core backends in old versions of Django did not support infinte
+  timeouts. They now do, so Cache Machine's custom backends are no longer necessary. They have been
+  removed, so you should revert to using the core Django backends.
+
 v0.9.1 (2015-10-22)
------------------
+-------------------
 
 - Fix bug that prevented objects retrieved via cache machine from being
   re-cached by application code (see PR #103)

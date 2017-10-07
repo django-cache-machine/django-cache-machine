@@ -6,3 +6,4 @@ redis
 flake8
 coverage
 psycopg2
+python-memcached>=1.58
