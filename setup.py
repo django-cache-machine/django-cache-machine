@@ -13,7 +13,7 @@ setup(
     author_email='jbalogh@mozilla.com',
     url='http://github.com/django-cache-machine/django-cache-machine',
     license='BSD',
-    packages=['caching', 'caching.backends'],
+    packages=['caching'],
     include_package_data=True,
     zip_safe=False,
     classifiers=[
