@@ -25,7 +25,7 @@ after_success:
 env:
   - TOX_ENV="dj18-py27,dj18-py34,dj18-py35"
   - TOX_ENV="dj19-py27,dj19-py34,dj19-py35,dj19-py36"
-  # - TOX_ENV="dj110-py27,dj110-py34,dj110-py35,dj110-py36"
+  - TOX_ENV="dj110-py27,dj110-py34,dj110-py35,dj110-py36"
   # - TOX_ENV="dj111-py27,dj111-py34,dj111-py35,dj111-py36"
   - TOX_ENV="py27-flake8,py36-flake8"
   - TOX_ENV="docs"
