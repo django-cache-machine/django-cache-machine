@@ -7,6 +7,9 @@ python:
   - "3.6"
 addons:
   postgresql: "9.5"
+before_install:
+  # work around https://github.com/travis-ci/travis-ci/issues/8363
+  - pyenv global system 3.5
 before_script:
   - psql -c 'create database travis_ci_test;' -U postgres
   - psql -c 'create database travis_ci_test2;' -U postgres
