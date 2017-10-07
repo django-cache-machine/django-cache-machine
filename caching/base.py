@@ -157,6 +157,18 @@ class CachingQuerySet(models.query.QuerySet):
         if self.timeout == self._default_timeout_pickle_key:
             self.timeout = DEFAULT_TIMEOUT
 
+    def _fetch_all(self):
+        """
+        Django 1.11 changed _fetch_all to use self._iterable_class() rather than
+        self.iterator(). That bypasses our iterator, so override Queryset._fetch_all
+        to use our iterator.
+
+        https://github.com/django/django/commit/f3b7c059367a4e82bbfc7e4f0d42b10975e79f0c#diff-5b0dda5eb9a242c15879dc9cd2121379
+        """
+        if self._result_cache is None:
+            self._result_cache = list(self.iterator())
+        super(CachingQuerySet, self)._fetch_all()
+
     def flush_key(self):
         return flush_key(self.query_key())
 
