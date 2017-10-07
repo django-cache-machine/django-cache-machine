@@ -9,6 +9,13 @@ from django.db.models import signals
 from django.db.models.sql import query, EmptyResultSet
 from django.utils import encoding
 
+try:
+    from django.db.models.query import ValuesListIterable
+except ImportError:
+    # ValuesListIterable is defined in Django 1.9+, and if it's present, we
+    # need to workaround a possible infinite recursion. See CachingQuerySet.iterator()
+    ValuesListIterable = None
+
 from caching import config
 from .invalidation import invalidator, flush_key, make_key, byid, cache
 
@@ -162,15 +169,22 @@ class CachingQuerySet(models.query.QuerySet):
         iterator = super(CachingQuerySet, self).iterator
         if self.timeout == config.NO_CACHE:
             return iter(iterator())
-        else:
-            try:
-                # Work-around for Django #12717.
-                query_string = self.query_key()
-            except query.EmptyResultSet:
-                return iterator()
-            if config.FETCH_BY_ID:
-                iterator = self.fetch_by_id
-            return iter(CacheMachine(self.model, query_string, iterator, self.timeout, db=self.db))
+
+        try:
+            # Work-around for Django #12717.
+            query_string = self.query_key()
+        except query.EmptyResultSet:
+            return iterator()
+        if config.FETCH_BY_ID:
+            # fetch_by_id uses a ValuesList to get a list of pks. If we are
+            # currently about to run that query, we DON'T want to use the
+            # fetch_by_id iterator or else we will run into an infinite
+            # recursion. So, if we are about to run that query, use the
+            # standard iterator.
+            if ValuesListIterable and self._iterable_class == ValuesListIterable:
+                return iter(iterator())
+            iterator = self.fetch_by_id
+        return iter(CacheMachine(self.model, query_string, iterator, self.timeout, db=self.db))
 
     def fetch_by_id(self):
         """
