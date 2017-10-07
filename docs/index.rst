@@ -14,59 +14,9 @@ affect you, please see the :ref:`release-notes`.
 Settings
 --------
 
-Before we start, you'll have to update your ``settings.py`` to use one of the
-caching backends provided by Cache Machine.  Prior to Django 1.6, Django's
-built-in caching backends did not allow for infinite cache timeouts,
-which are critical for doing invalidation (see below).  Cache Machine extends
-the ``locmem`` and ``memcached`` backends provided by Django to enable
-indefinite caching when a timeout of ``caching.base.FOREVER`` is
-passed.  If you were already using one of these backends, you can probably go
-on using them just as you were.
-
-With Django 1.4 or higher, you should use the ``CACHES`` setting::
-
-    CACHES = {
-        'default': {
-            'BACKEND': 'caching.backends.memcached.MemcachedCache',
-            'LOCATION': [
-                'server-1:11211',
-                'server-2:11211',
-            ],
-            'KEY_PREFIX': 'weee:',
-        },
-    }
-
-Note that we have to specify the class, not the module, for the ``BACKEND``
-property, and that the ``KEY_PREFIX`` is optional. The ``LOCATION`` may be a
-string, instead of a list, if you only have one server.
-
-If you require the default cache backend to be a different type of
-cache backend or want Cache Machine to use specific cache server
-options simply define a separate ``cache_machine`` entry for the
-``CACHES`` setting, e.g.::
-
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-            'LOCATION': 'server-1:11211',
-        },
-        'cache_machine': {
-            'BACKEND': 'caching.backends.memcached.MemcachedCache',
-            'LOCATION': [
-                'server-1:11211',
-                'server-2:11211',
-            ],
-            'KEY_PREFIX': 'weee:',
-        },
-    }
-
-.. note::
-
-    Cache Machine also supports the other memcache backend support by
-    Django >= 1.4 based on pylibmc_:
-    ``caching.backends.memcached.PyLibMCCache``.
-
-.. _pylibmc: http://sendapatch.se/projects/pylibmc/
+Older versions of Cache Machine required you to use customized cache backends. As of Django 1.6,
+these are no longer needed and they have been removed from Cache Machine. Use the standard Django
+cache backends.
 
 COUNT queries
 ^^^^^^^^^^^^^

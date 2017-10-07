@@ -1,22 +1,19 @@
 from __future__ import unicode_literals
-import django
 import jinja2
 import logging
 import pickle
 import sys
+import unittest
 
 from django.conf import settings
+from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.test import TestCase, TransactionTestCase
 from django.utils import translation, encoding
 
-from caching import base, invalidation, config, compat
+from caching import base, invalidation, config
 
 from .testapp.models import Addon, User
 
-if sys.version_info < (2, 7):
-    import unittest2 as unittest
-else:
-    import unittest
 
 if sys.version_info >= (3, ):
     from unittest import mock
@@ -26,22 +23,6 @@ else:
 
 cache = invalidation.cache
 log = logging.getLogger(__name__)
-
-if django.get_version().startswith('1.3'):
-    class settings_patch(object):
-        def __init__(self, **kwargs):
-            self.options = kwargs
-
-        def __enter__(self):
-            self._old_settings = dict((k, getattr(settings, k, None)) for k in self.options)
-            for k, v in list(self.options.items()):
-                setattr(settings, k, v)
-
-        def __exit__(self, *args):
-            for k in self.options:
-                setattr(settings, k, self._old_settings[k])
-
-    TestCase.settings = settings_patch
 
 
 class CachingTestCase(TestCase):
@@ -423,7 +404,7 @@ class CachingTestCase(TestCase):
         """
         Test that memcached infinite timeouts work with all Django versions.
         """
-        cache.set('foo', 'bar', timeout=compat.FOREVER)
+        cache.set('foo', 'bar', timeout=None)
         # for memcached, 0 timeout means store forever
         mock_set.assert_called_with(':1:foo', 'bar', 0)
 
@@ -546,7 +527,7 @@ class CachingTestCase(TestCase):
         # pickled/unpickled on/from different Python processes which may have different
         # underlying values for DEFAULT_TIMEOUT:
         q1 = Addon.objects.all()
-        self.assertEqual(q1.timeout, compat.DEFAULT_TIMEOUT)
+        self.assertEqual(q1.timeout, DEFAULT_TIMEOUT)
         pickled = pickle.dumps(q1)
         new_timeout = object()
         with mock.patch('caching.base.DEFAULT_TIMEOUT', new_timeout):
