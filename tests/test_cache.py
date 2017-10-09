@@ -63,7 +63,7 @@ class CachingTestCase(TestCase):
         self.assertIs(Addon.objects.filter(id=1)[:1][0].from_cache, False)
         self.assertIs(Addon.objects.filter(id=1)[:1][0].from_cache, True)
 
-    def test_should_not_cache_values1(self):
+    def test_should_not_cache_values(self):
         with self.assertNumQueries(2):
             Addon.objects.values('id')[0]
             Addon.objects.values('id')[0]
