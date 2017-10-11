@@ -9,15 +9,15 @@ from django.db.models import signals
 from django.db.models.sql import query, EmptyResultSet
 from django.utils import encoding
 
+from caching import config
+from caching.invalidation import invalidator, flush_key, make_key, byid, cache
+
 try:
     from django.db.models.query import ModelIterable
 except ImportError:
     # ModelIterable is defined in Django 1.9+, and if it's present, we
-    # need to workaround a possible infinite recursion. See CachingQuerySet.iterator()
+    # use it iterate over our results. If not, we fall back to a Django 1.8 compatible way.
     ModelIterable = None
-
-from caching import config
-from caching.invalidation import invalidator, flush_key, make_key, byid, cache
 
 log = logging.getLogger('caching')
 
@@ -57,20 +57,10 @@ class CachingManager(models.Manager):
         return self.cache(config.NO_CACHE)
 
 
-class CacheMachine(object):
+class CacheInternalCommonMixin(object):
     """
-    Handles all the cache management for a QuerySet.
-
-    Takes the string representation of a query and a function that can be
-    called to get an iterator over some database results.
+    A set of methods common to our Django 1.8 and Django 1.9+ iterators.
     """
-
-    def __init__(self, model, query_string, iter_function, timeout=DEFAULT_TIMEOUT, db='default'):
-        self.model = model
-        self.query_string = query_string
-        self.iter_function = iter_function
-        self.timeout = timeout
-        self.db = db
 
     def query_key(self):
         """
@@ -81,16 +71,39 @@ class CacheMachine(object):
         master), throwing a Django ValueError in the process. Django prevents
         cross DB model saving among related objects.
         """
-        query_db_string = 'qs:%s::db:%s' % (self.query_string, self.db)
+        query_db_string = 'qs:%s::db:%s' % (self.queryset.query_key(), self.db)
         return make_key(query_db_string, with_locale=False)
 
+    def cache_objects(self, objects, query_key):
+        """Cache query_key => objects, then update the flush lists."""
+        log.debug('query_key: %s' % query_key)
+        query_flush = flush_key(self.queryset.query_key())
+        log.debug('query_flush: %s' % query_flush)
+        cache.add(query_key, objects, timeout=self.timeout)
+        invalidator.cache_objects(self.queryset.model, objects, query_key, query_flush)
+
     def __iter__(self):
+        if hasattr(super(CacheInternalCommonMixin, self), '__iter__'):
+            # This is the Django 1.9+ class, so we'll use super().__iter__
+            # which is a ModelIterable iterator.
+            iterator = super(CacheInternalCommonMixin, self).__iter__
+        else:
+            # This is Django 1.8. Use the function passed into the class
+            # constructor.
+            iterator = self.iter_function
+
+        if self.timeout == config.NO_CACHE:
+            # no cache, just iterate and return the results
+            for obj in iterator():
+                yield obj
+            return
+
+        # Try to fetch from the cache.
         try:
             query_key = self.query_key()
         except query.EmptyResultSet:
             raise StopIteration
 
-        # Try to fetch from the cache.
         cached = cache.get(query_key)
         if cached is not None:
             log.debug('cache hit: %s' % query_key)
@@ -99,28 +112,47 @@ class CacheMachine(object):
                 yield obj
             return
 
-        # Do the database query, cache it once we have all the objects.
-        iterator = self.iter_function()
+        # Use the special FETCH_BY_ID iterator if configured.
+        if config.FETCH_BY_ID and hasattr(self.queryset, 'fetch_by_id'):
+            iterator = self.queryset.fetch_by_id
 
+        # No cached results. Do the database query, and cache it once we have
+        # all the objects.
         to_cache = []
-        try:
-            while True:
-                obj = next(iterator)
-                obj.from_cache = False
-                to_cache.append(obj)
-                yield obj
-        except StopIteration:
-            if to_cache or config.CACHE_EMPTY_QUERYSETS:
-                self.cache_objects(to_cache, query_key)
-            raise
+        for obj in iterator():
+            obj.from_cache = False
+            to_cache.append(obj)
+            yield obj
+        if to_cache or config.CACHE_EMPTY_QUERYSETS:
+            self.cache_objects(to_cache, query_key)
 
-    def cache_objects(self, objects, query_key):
-        """Cache query_key => objects, then update the flush lists."""
-        log.debug('query_key: %s' % query_key)
-        query_flush = flush_key(self.query_string)
-        log.debug('query_flush: %s' % query_flush)
-        cache.add(query_key, objects, timeout=self.timeout)
-        invalidator.cache_objects(self.model, objects, query_key, query_flush)
+
+class CacheMachine(CacheInternalCommonMixin):
+    """
+    Handles all the cache management for a QuerySet.
+
+    Takes the string representation of a query and a function that can be
+    called to get an iterator over some database results.
+    """
+
+    def __init__(self, queryset, iter_function=None, timeout=DEFAULT_TIMEOUT, db='default'):
+        self.queryset = queryset
+        self.iter_function = iter_function
+        self.timeout = timeout
+        self.db = db
+
+
+if ModelIterable:
+    class CachingModelIterable(CacheInternalCommonMixin, ModelIterable):
+        """
+        A version of Django's ModelIterable that first tries to get results from the cache.
+        """
+
+        def __init__(self, *args, **kwargs):
+            super(CachingModelIterable, self).__init__(*args, **kwargs)
+            # copy timeout and db from queryset to allow CacheInternalCommonMixin to be DRYer
+            self.timeout = self.queryset.timeout
+            self.db = self.queryset.db
 
 
 class CachingQuerySet(models.query.QuerySet):
@@ -130,6 +162,9 @@ class CachingQuerySet(models.query.QuerySet):
     def __init__(self, *args, **kw):
         super(CachingQuerySet, self).__init__(*args, **kw)
         self.timeout = DEFAULT_TIMEOUT
+        if ModelIterable:
+            # Django 1.9+
+            self._iterable_class = CachingModelIterable
 
     def __getstate__(self):
         """
@@ -149,18 +184,6 @@ class CachingQuerySet(models.query.QuerySet):
         if self.timeout == self._default_timeout_pickle_key:
             self.timeout = DEFAULT_TIMEOUT
 
-    def _fetch_all(self):
-        """
-        Django 1.11 changed _fetch_all to use self._iterable_class() rather than
-        self.iterator(). That bypasses our iterator, so override Queryset._fetch_all
-        to use our iterator.
-
-        https://github.com/django/django/commit/f3b7c059367a4e82bbfc7e4f0d42b10975e79f0c#diff-5b0dda5eb9a242c15879dc9cd2121379
-        """
-        if self._result_cache is None:
-            self._result_cache = list(self.iterator())
-        super(CachingQuerySet, self)._fetch_all()
-
     def flush_key(self):
         return flush_key(self.query_key())
 
@@ -170,22 +193,11 @@ class CachingQuerySet(models.query.QuerySet):
         return sql % params
 
     def iterator(self):
+        if ModelIterable:
+            # Django 1.9+
+            return self._iterable_class(self)
         iterator = super(CachingQuerySet, self).iterator
-        if self.timeout == config.NO_CACHE:
-            return iter(iterator())
-        # ModelIterable and _iterable_class are introduced in Django 1.9. We only cache
-        # ModelIterable querysets (because we mark each instance as being cached with a `from_cache`
-        # attribute, and can't do so with dictionaries or tuples)
-        if getattr(self, '_iterable_class', None) != ModelIterable:
-            return iter(iterator())
-        try:
-            # Work-around for Django #12717.
-            query_string = self.query_key()
-        except query.EmptyResultSet:
-            return iterator()
-        if config.FETCH_BY_ID:
-            iterator = self.fetch_by_id
-        return iter(CacheMachine(self.model, query_string, iterator, self.timeout, db=self.db))
+        return iter(CacheMachine(self, iterator, self.timeout, db=self.db))
 
     def fetch_by_id(self):
         """
@@ -320,10 +332,12 @@ class CachingRawQuerySet(models.query.RawQuerySet):
             while True:
                 yield next(iterator)
         else:
-            sql = self.raw_query % tuple(self.params)
-            for obj in CacheMachine(self.model, sql, iterator, timeout=self.timeout):
+            for obj in CacheMachine(self, iterator, timeout=self.timeout):
                 yield obj
             raise StopIteration
+
+    def query_key(self):
+        return self.raw_query % tuple(self.params)
 
 
 def _function_cache_key(key):

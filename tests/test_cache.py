@@ -378,19 +378,19 @@ class CachingTestCase(TestCase):
         # Make sure we're updating the wrapper's docstring.
         self.assertEqual(b.calls.__doc__, Addon.calls.__doc__)
 
-    @mock.patch('caching.base.CacheMachine')
-    def test_no_cache_from_manager(self, CacheMachine):
+    @mock.patch('caching.base.cache.get')
+    def test_no_cache_from_manager(self, mock_cache):
         a = Addon.objects.no_cache().get(id=1)
         self.assertEqual(a.id, 1)
         self.assertFalse(hasattr(a, 'from_cache'))
-        self.assertFalse(CacheMachine.called)
+        self.assertFalse(mock_cache.called)
 
-    @mock.patch('caching.base.CacheMachine')
-    def test_no_cache_from_queryset(self, CacheMachine):
+    @mock.patch('caching.base.cache.get')
+    def test_no_cache_from_queryset(self, mock_cache):
         a = Addon.objects.all().no_cache().get(id=1)
         self.assertEqual(a.id, 1)
         self.assertFalse(hasattr(a, 'from_cache'))
-        self.assertFalse(CacheMachine.called)
+        self.assertFalse(mock_cache.called)
 
     def test_timeout_from_manager(self):
         q = Addon.objects.cache(12).filter(id=1)
