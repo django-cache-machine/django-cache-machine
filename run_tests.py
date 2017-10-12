@@ -47,7 +47,7 @@ def main():
             test_cmd = ['coverage', 'run']
         else:
             test_cmd = []
-        test_cmd += [django_admin, 'test']
+        test_cmd += [django_admin, 'test', '--keepdb']
         results.append(call(test_cmd))
         if args.with_coverage:
             results.append(call(['coverage', 'report', '-m', '--fail-under', '70']))
