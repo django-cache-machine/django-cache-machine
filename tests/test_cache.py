@@ -165,15 +165,15 @@ class CachingTestCase(TestCase):
         raw2 = list(Addon.objects.raw(sql, [2]))[0]
         self.assertEqual(raw2.id, 2)
 
-    @mock.patch('caching.base.CacheMachine')
-    def test_raw_nocache(self, CacheMachine):
+    @mock.patch('caching.base.CachingModelIterable')
+    def test_raw_nocache(self, CachingModelIterable):
         base.TIMEOUT = 60
         sql = 'SELECT * FROM %s WHERE id = 1' % Addon._meta.db_table
         raw = list(Addon.objects.raw(sql, timeout=config.NO_CACHE))
         self.assertEqual(len(raw), 1)
         raw_addon = raw[0]
         self.assertFalse(hasattr(raw_addon, 'from_cache'))
-        self.assertFalse(CacheMachine.called)
+        self.assertFalse(CachingModelIterable.called)
 
     @mock.patch('caching.base.cache')
     def test_count_cache(self, cache_mock):
