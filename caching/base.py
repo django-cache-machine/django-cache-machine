@@ -67,8 +67,9 @@ class CachingModelIterable(ModelIterable):
     """
     Handles all the cache management for a QuerySet.
 
-    Takes the string representation of a query and a function that can be
-    called to get an iterator over some database results.
+    Takes a queryset, and optionally takes a function that can be called to
+    get an iterator over some database results. The function is only needed
+    for RawQuerySets currently.
     """
 
     def __init__(self, queryset, *args, **kwargs):

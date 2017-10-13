@@ -202,7 +202,7 @@ file, replacing ``localhost`` with the hostname of your Redis server::
 Classes That May Interest You
 -----------------------------
 
-.. autoclass:: caching.base.CacheMachine
+.. autoclass:: caching.base.CachingModelIterable
 
 .. autoclass:: caching.base.CachingManager
     :members:
