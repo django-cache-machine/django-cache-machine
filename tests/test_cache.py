@@ -1,48 +1,28 @@
 from __future__ import unicode_literals
+import jinja2
 import logging
 import pickle
 import sys
+import unittest
 
-if sys.version_info < (2, 7):
-    import unittest2 as unittest
-else:
-    import unittest
-
-import django
 from django.conf import settings
+from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.test import TestCase, TransactionTestCase
 from django.utils import translation, encoding
+
+from caching import base, invalidation, config
+
+from .testapp.models import Addon, User
+
 
 if sys.version_info >= (3, ):
     from unittest import mock
 else:
     import mock
 
-import jinja2
-
-from caching import base, invalidation, config, compat
-
-from .testapp.models import Addon, User
-
 
 cache = invalidation.cache
 log = logging.getLogger(__name__)
-
-if django.get_version().startswith('1.3'):
-    class settings_patch(object):
-        def __init__(self, **kwargs):
-            self.options = kwargs
-
-        def __enter__(self):
-            self._old_settings = dict((k, getattr(settings, k, None)) for k in self.options)
-            for k, v in list(self.options.items()):
-                setattr(settings, k, v)
-
-        def __exit__(self, *args):
-            for k in self.options:
-                setattr(settings, k, self._old_settings[k])
-
-    TestCase.settings = settings_patch
 
 
 class CachingTestCase(TestCase):
@@ -82,6 +62,16 @@ class CachingTestCase(TestCase):
     def test_slice_cache(self):
         self.assertIs(Addon.objects.filter(id=1)[:1][0].from_cache, False)
         self.assertIs(Addon.objects.filter(id=1)[:1][0].from_cache, True)
+
+    def test_should_not_cache_values(self):
+        with self.assertNumQueries(2):
+            Addon.objects.values('id')[0]
+            Addon.objects.values('id')[0]
+
+    def test_should_not_cache_values_list(self):
+        with self.assertNumQueries(2):
+            Addon.objects.values_list('id')[0]
+            Addon.objects.values_list('id')[0]
 
     def test_invalidation(self):
         self.assertIs(Addon.objects.get(id=1).from_cache, False)
@@ -175,15 +165,15 @@ class CachingTestCase(TestCase):
         raw2 = list(Addon.objects.raw(sql, [2]))[0]
         self.assertEqual(raw2.id, 2)
 
-    @mock.patch('caching.base.CacheMachine')
-    def test_raw_nocache(self, CacheMachine):
+    @mock.patch('caching.base.CachingModelIterable')
+    def test_raw_nocache(self, CachingModelIterable):
         base.TIMEOUT = 60
         sql = 'SELECT * FROM %s WHERE id = 1' % Addon._meta.db_table
         raw = list(Addon.objects.raw(sql, timeout=config.NO_CACHE))
         self.assertEqual(len(raw), 1)
         raw_addon = raw[0]
         self.assertFalse(hasattr(raw_addon, 'from_cache'))
-        self.assertFalse(CacheMachine.called)
+        self.assertFalse(CachingModelIterable.called)
 
     @mock.patch('caching.base.cache')
     def test_count_cache(self, cache_mock):
@@ -314,7 +304,8 @@ class CachingTestCase(TestCase):
             return counter.call_count
 
         a = Addon.objects.get(id=1)
-        f = lambda: base.cached_with(a, expensive, 'key')
+
+        def f(): return base.cached_with(a, expensive, 'key')
 
         # Only gets called once.
         self.assertEqual(f(), 1)
@@ -334,7 +325,8 @@ class CachingTestCase(TestCase):
 
         counter.reset_mock()
         q = Addon.objects.filter(id=1)
-        f = lambda: base.cached_with(q, expensive, 'key')
+
+        def f(): return base.cached_with(q, expensive, 'key')
 
         # Only gets called once.
         self.assertEqual(f(), 1)
@@ -361,7 +353,8 @@ class CachingTestCase(TestCase):
         obj = mock.Mock()
         obj.query_key.return_value = 'xxx'
         obj.flush_key.return_value = 'key'
-        f = lambda: 1
+
+        def f(): return 1
         self.assertEqual(base.cached_with(obj, f, 'adf:%s' % u), 1)
 
     def test_cached_method(self):
@@ -385,19 +378,19 @@ class CachingTestCase(TestCase):
         # Make sure we're updating the wrapper's docstring.
         self.assertEqual(b.calls.__doc__, Addon.calls.__doc__)
 
-    @mock.patch('caching.base.CacheMachine')
-    def test_no_cache_from_manager(self, CacheMachine):
+    @mock.patch('caching.base.cache.get')
+    def test_no_cache_from_manager(self, mock_cache):
         a = Addon.objects.no_cache().get(id=1)
         self.assertEqual(a.id, 1)
         self.assertFalse(hasattr(a, 'from_cache'))
-        self.assertFalse(CacheMachine.called)
+        self.assertFalse(mock_cache.called)
 
-    @mock.patch('caching.base.CacheMachine')
-    def test_no_cache_from_queryset(self, CacheMachine):
+    @mock.patch('caching.base.cache.get')
+    def test_no_cache_from_queryset(self, mock_cache):
         a = Addon.objects.all().no_cache().get(id=1)
         self.assertEqual(a.id, 1)
         self.assertFalse(hasattr(a, 'from_cache'))
-        self.assertFalse(CacheMachine.called)
+        self.assertFalse(mock_cache.called)
 
     def test_timeout_from_manager(self):
         q = Addon.objects.cache(12).filter(id=1)
@@ -421,7 +414,7 @@ class CachingTestCase(TestCase):
         """
         Test that memcached infinite timeouts work with all Django versions.
         """
-        cache.set('foo', 'bar', timeout=compat.FOREVER)
+        cache.set('foo', 'bar', timeout=None)
         # for memcached, 0 timeout means store forever
         mock_set.assert_called_with(':1:foo', 'bar', 0)
 
@@ -544,7 +537,7 @@ class CachingTestCase(TestCase):
         # pickled/unpickled on/from different Python processes which may have different
         # underlying values for DEFAULT_TIMEOUT:
         q1 = Addon.objects.all()
-        self.assertEqual(q1.timeout, compat.DEFAULT_TIMEOUT)
+        self.assertEqual(q1.timeout, DEFAULT_TIMEOUT)
         pickled = pickle.dumps(q1)
         new_timeout = object()
         with mock.patch('caching.base.DEFAULT_TIMEOUT', new_timeout):

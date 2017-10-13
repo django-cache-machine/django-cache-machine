@@ -1,9 +1,10 @@
 import os
 import sys
 
+import caching
+
 sys.path.append(os.path.abspath('..'))
 
-import caching
 
 # The suffix of source filenames.
 source_suffix = '.rst'

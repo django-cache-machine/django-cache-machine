@@ -2,6 +2,6 @@ from .settings import *  # flake8: noqa
 
 CACHES = {
     'default': {
-        'BACKEND': 'caching.backends.locmem.LocMemCache',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     },
 }
