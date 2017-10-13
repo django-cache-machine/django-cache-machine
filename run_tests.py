@@ -15,16 +15,15 @@ ROOT = os.path.abspath(os.path.dirname(__file__))
 os.environ['PYTHONPATH'] = os.pathsep.join([ROOT,
                                             os.path.join(ROOT, 'examples')])
 
-SETTINGS = [
+SETTINGS = (
     'locmem_settings',
     'settings',
     'memcache_byid',
     'custom_backend',
     'redis_settings',
     'redis_byid',
-]
-if sys.version_info >= (2, 7):
-    SETTINGS.append('django_redis_settings')
+    'django_redis_settings',
+)
 
 
 def main():
