@@ -3,8 +3,8 @@
 Release Notes
 ==================
 
-v1.0.0dev (TBD)
----------------
+v1.0.0 (2017-10-13)
+-------------------
 
 - Update Travis and Tox configurations
 - Drop support for Python < 2.7
