@@ -87,8 +87,15 @@ class CachingModelIterable(ModelIterable):
         master), throwing a Django ValueError in the process. Django prevents
         cross DB model saving among related objects.
         """
+<<<<<<< HEAD
+        query_db_string = 'qs:%s::db:%s' % (self.query_string, self.db)
+        key = make_key(query_db_string, with_locale=False)
+        log.debug('Key: {0} Query: {1}'.format(key, self.query_string))
+        return key
+=======
         query_db_string = 'qs:%s::db:%s' % (self.queryset.query_key(), self.db)
         return make_key(query_db_string, with_locale=False)
+>>>>>>> ed1b2336403b5031d6efd2c2833100b69579f1f0
 
     def cache_objects(self, objects, query_key):
         """Cache query_key => objects, then update the flush lists."""
@@ -126,6 +133,8 @@ class CachingModelIterable(ModelIterable):
                 obj.from_cache = True
                 yield obj
             return
+        else:
+            log.debug('cache miss: %s' % query_key)
 
         # Use the special FETCH_BY_ID iterator if configured.
         if config.FETCH_BY_ID and hasattr(self.queryset, 'fetch_by_id'):
@@ -393,7 +402,14 @@ class MethodWrapper(object):
         self.cache = {}
 
     def __call__(self, *args, **kwargs):
+<<<<<<< HEAD
+        def k(o):
+            if hasattr(o, 'cache_key'):
+                return o.cache_key
+            return o
+=======
         def k(o): return o.cache_key if hasattr(o, 'cache_key') else o
+>>>>>>> ed1b2336403b5031d6efd2c2833100b69579f1f0
         arg_keys = list(map(k, args))
         kwarg_keys = [(key, k(val)) for key, val in list(kwargs.items())]
         key_parts = ('m', self.obj.cache_key, self.func.__name__,

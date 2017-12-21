@@ -10,6 +10,10 @@ from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.test import TestCase, TransactionTestCase
 from django.utils import translation, encoding
 
+<<<<<<< HEAD
+from nose.tools import eq_
+from nose.plugins.skip import SkipTest
+=======
 from caching import base, invalidation, config
 
 from .testapp.models import Addon, User
@@ -19,7 +23,13 @@ if sys.version_info >= (3, ):
     from unittest import mock
 else:
     import mock
+>>>>>>> ed1b2336403b5031d6efd2c2833100b69579f1f0
 
+
+if six.PY3:
+    from unittest import mock
+else:
+    import mock
 
 cache = invalidation.cache
 log = logging.getLogger(__name__)
@@ -305,7 +315,12 @@ class CachingTestCase(TestCase):
 
         a = Addon.objects.get(id=1)
 
+<<<<<<< HEAD
+        def f():
+            return base.cached_with(a, expensive, 'key')
+=======
         def f(): return base.cached_with(a, expensive, 'key')
+>>>>>>> ed1b2336403b5031d6efd2c2833100b69579f1f0
 
         # Only gets called once.
         self.assertEqual(f(), 1)
@@ -326,7 +341,12 @@ class CachingTestCase(TestCase):
         counter.reset_mock()
         q = Addon.objects.filter(id=1)
 
+<<<<<<< HEAD
+        def f():
+            return base.cached_with(q, expensive, 'key')
+=======
         def f(): return base.cached_with(q, expensive, 'key')
+>>>>>>> ed1b2336403b5031d6efd2c2833100b69579f1f0
 
         # Only gets called once.
         self.assertEqual(f(), 1)
@@ -354,8 +374,15 @@ class CachingTestCase(TestCase):
         obj.query_key.return_value = 'xxx'
         obj.flush_key.return_value = 'key'
 
+<<<<<<< HEAD
+        def f():
+            return 1
+
+        eq_(base.cached_with(obj, f, 'adf:%s' % u), 1)
+=======
         def f(): return 1
         self.assertEqual(base.cached_with(obj, f, 'adf:%s' % u), 1)
+>>>>>>> ed1b2336403b5031d6efd2c2833100b69579f1f0
 
     def test_cached_method(self):
         a = Addon.objects.get(id=1)

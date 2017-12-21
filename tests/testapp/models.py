@@ -4,6 +4,8 @@ from django.db import models
 from django.utils import six
 from caching.base import CachingMixin, CachingManager, cached_method
 
+from caching.base import CachingMixin, CachingManager, cached_method
+
 if six.PY3:
     from unittest import mock
 else:
