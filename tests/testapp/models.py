@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 from django.db import models
 from django.utils import six
+from caching.base import CachingMixin, CachingManager, cached_method
 
 from caching.base import CachingMixin, CachingManager, cached_method
 

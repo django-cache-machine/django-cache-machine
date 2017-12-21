@@ -13,7 +13,7 @@ setup(
     author_email='jbalogh@mozilla.com',
     url='http://github.com/django-cache-machine/django-cache-machine',
     license='BSD',
-    packages=['caching', 'caching.backends'],
+    packages=['caching'],
     include_package_data=True,
     zip_safe=False,
     classifiers=[
@@ -26,11 +26,11 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ]
 )

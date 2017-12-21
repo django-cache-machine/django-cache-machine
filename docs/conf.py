@@ -2,6 +2,12 @@ import os
 import sys
 
 import caching
+<<<<<<< HEAD
+=======
+
+sys.path.append(os.path.abspath('..'))
+
+>>>>>>> ed1b2336403b5031d6efd2c2833100b69579f1f0
 
 sys.path.append(os.path.abspath('..'))
 

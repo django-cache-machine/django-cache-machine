@@ -7,6 +7,7 @@ automatically.
 import os
 import sys
 import argparse
+<<<<<<< HEAD
 
 from subprocess import call
 try:
@@ -18,6 +19,9 @@ except ImportError:
 
     def check_output(x):
         return subprocess.Popen(x, stdout=subprocess.PIPE).communicate()[0]
+=======
+from subprocess import call, check_output
+>>>>>>> ed1b2336403b5031d6efd2c2833100b69579f1f0
 
 NAME = os.path.basename(os.path.dirname(__file__))
 ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -32,6 +36,7 @@ SETTINGS = (
     'custom_backend',
     'redis_settings',
     'redis_byid',
+    'django_redis_settings',
 )
 
 
@@ -57,7 +62,7 @@ def main():
             test_cmd = ['coverage', 'run']
         else:
             test_cmd = []
-        test_cmd += [django_admin, 'test']
+        test_cmd += [django_admin, 'test', '--keepdb']
         results.append(call(test_cmd))
         if args.with_coverage:
             results.append(call(['coverage', 'report', '-m', '--fail-under', '70']))

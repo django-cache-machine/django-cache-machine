@@ -5,7 +5,7 @@ CACHES = {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     },
     'cache_machine': {
-        'BACKEND': 'caching.backends.memcached.MemcachedCache',
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
         'LOCATION': 'localhost:11211',
     },
 }

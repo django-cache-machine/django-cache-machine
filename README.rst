@@ -17,7 +17,7 @@ For full docs, see https://cache-machine.readthedocs.org/en/latest/.
 Requirements
 ------------
 
-Cache Machine works with Django 1.4-1.8 and Python 2.6, 2.7, 3.3 and 3.4.
+Cache Machine works with Django 1.8-1.11 and Python 2.7, 3.4, 3.5 and 3.6.
 
 
 Installation
@@ -26,10 +26,6 @@ Installation
 Get it from `pypi <http://pypi.python.org/pypi/django-cache-machine>`_::
 
     pip install django-cache-machine
-
-or `github <http://github.com/django-cache-machine/django-cache-machine>`_::
-
-    pip install -e git://github.com/django-cache-machine/django-cache-machine.git#egg=django-cache-machine
 
 
 Running Tests

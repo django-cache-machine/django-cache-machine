@@ -2,44 +2,32 @@ language: python
 services:
   - memcached
   - redis-server
-# Use Travis' build matrix and exclude functions rather than running tox
-# directly so that we can run the builds in parallel and get coverage reports
-# for each Python/Django version combo
 python:
-  - "2.6"
-  - "2.7"
-  - "3.3"
-  - "3.4"
+# python selected by tox, so specify only one version here
+  - "3.6"
 addons:
-  postgresql: "9.4"
+  postgresql: "9.5"
+before_install:
+  # work around https://github.com/travis-ci/travis-ci/issues/8363
+  - pyenv global system 3.5
 before_script:
   - psql -c 'create database travis_ci_test;' -U postgres
   - psql -c 'create database travis_ci_test2;' -U postgres
 install:
   - pip install -U pip  # make sure we have the latest version
   - pip install -e .
-  - pip install -r requirements/py`echo $TRAVIS_PYTHON_VERSION|cut -d'.' -f1`.txt "$DJANGO_SPEC"
+  - pip install tox
   - pip install coveralls
 script:
-  - python run_tests.py --with-coverage
-  - flake8 .
+  - tox -e $TOX_ENV
 after_success:
   - coveralls
 env:
-  - DJANGO_SPEC="Django>=1.4,<1.5"
-  - DJANGO_SPEC="Django>=1.5,<1.6"
-  - DJANGO_SPEC="Django>=1.6,<1.7"
-  - DJANGO_SPEC="Django>=1.7,<1.8"
-  - DJANGO_SPEC="Django>=1.8,<1.9"
-matrix:
-  exclude:
-    - python: "2.6"
-      env: DJANGO_SPEC="Django>=1.7,<1.8"
-    - python: "2.6"
-      env: DJANGO_SPEC="Django>=1.8,<1.9"
-    - python: "3.3"
-      env: DJANGO_SPEC="Django>=1.4,<1.5"
-    - python: "3.4"
-      env: DJANGO_SPEC="Django>=1.4,<1.5"
+  - TOX_ENV="dj18-py27,dj18-py34,dj18-py35"
+  - TOX_ENV="dj19-py27,dj19-py34,dj19-py35,dj19-py36"
+  - TOX_ENV="dj110-py27,dj110-py34,dj110-py35,dj110-py36"
+  - TOX_ENV="dj111-py27,dj111-py34,dj111-py35,dj111-py36"
+  - TOX_ENV="py27-flake8,py36-flake8"
+  - TOX_ENV="docs"
 # Adding sudo: False tells Travis to use their container-based infrastructure, which is somewhat faster.
 sudo: False

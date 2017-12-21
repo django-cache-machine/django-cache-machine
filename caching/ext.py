@@ -69,7 +69,7 @@ class FragmentCacheExtension(Extension):
 
     def _cache_support(self, name, obj, timeout, extra, caller):
         """Cache helper callback."""
-        if settings.TEMPLATE_DEBUG:
+        if settings.DEBUG:
             return caller()
         extra = ':'.join(map(encoding.smart_str, extra))
         key = 'fragment:%s:%s' % (name, extra)
