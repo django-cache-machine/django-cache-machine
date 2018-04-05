@@ -22,8 +22,8 @@ class User(CachingMixin, models.Model):
 
 class Addon(CachingMixin, models.Model):
     val = models.IntegerField()
-    author1 = models.ForeignKey(User)
-    author2 = models.ForeignKey(User, related_name='author2_set')
+    author1 = models.ForeignKey(User, on_delete=models.CASCADE)
+    author2 = models.ForeignKey(User, related_name='author2_set', on_delete=models.CASCADE)
 
     objects = CachingManager()
 

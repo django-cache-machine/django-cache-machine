@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import functools
 import logging
 
+import django
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.db import models
 from django.db.models import signals
@@ -289,14 +290,24 @@ class CachingMixin(object):
         """Return the cache key for self plus all related foreign keys."""
         fks = dict((f, getattr(self, f.attname)) for f in self._meta.fields
                    if isinstance(f, models.ForeignKey))
-        keys = [fk.rel.to._cache_key(val, incl_db and self._state.db or None)
-                for fk, val in list(fks.items())
-                if val is not None and hasattr(fk.rel.to, '_cache_key')]
+
+        keys = []
+        for fk, val in list(fks.items()):
+            related_model = self._get_fk_related_model(fk)
+            if val is not None and hasattr(related_model, '_cache_key'):
+                keys.append(related_model._cache_key(val, incl_db and self._state.db or None))
+
         return (self.get_cache_key(incl_db=incl_db),) + tuple(keys)
 
     def _flush_keys(self):
         """Return the flush key for self plus all related foreign keys."""
         return map(flush_key, self._cache_keys(incl_db=False))
+
+    def _get_fk_related_model(self, fk):
+        if django.VERSION[0] >= 2:
+            return fk.remote_field.model
+        else:
+            return fk.rel.to
 
 
 class CachingRawQuerySet(models.query.RawQuerySet):
