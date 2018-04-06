@@ -2,6 +2,9 @@ language: python
 services:
   - memcached
   - redis-server
+python:
+# python selected by tox, so specify only one version here
+  - "3.6"
 addons:
   postgresql: "9.5"
 before_install:
