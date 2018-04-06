@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 
+import django
 from django.db import models
 from django.utils import six
 from caching.base import CachingMixin, CachingManager, cached_method
@@ -18,6 +19,11 @@ class User(CachingMixin, models.Model):
     name = models.CharField(max_length=30)
 
     objects = CachingManager()
+
+    if django.VERSION[0] >= 2:
+        class Meta:
+            # Tell Django to use this manager when resolving foreign keys. (Django >= 2.0)
+            base_manager_name = 'objects'
 
 
 class Addon(CachingMixin, models.Model):

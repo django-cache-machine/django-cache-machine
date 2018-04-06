@@ -31,7 +31,8 @@ log = logging.getLogger('caching')
 
 class CachingManager(models.Manager):
 
-    # Tell Django to use this manager when resolving foreign keys.
+    # This option removed in Django 2.0
+    # Tell Django to use this manager when resolving foreign keys. (Django < 2.0)
     use_for_related_fields = True
 
     def get_queryset(self):
