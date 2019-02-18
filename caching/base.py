@@ -323,7 +323,10 @@ class CachingRawQuerySet(models.query.RawQuerySet):
         if self.timeout == config.NO_CACHE:
             iterator = iterator()
             while True:
-                yield next(iterator)
+                try:
+                    yield next(iterator)
+                except StopIteration:
+                    return
         else:
             for obj in CachingModelIterable(self, iter_function=iterator, timeout=self.timeout):
                 yield obj
