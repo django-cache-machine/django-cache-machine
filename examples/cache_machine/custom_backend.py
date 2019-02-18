@@ -1,4 +1,5 @@
-from .settings import *  # flake8: noqa
+# flake8: noqa
+from .settings import *
 
 CACHES = {
     'default': {

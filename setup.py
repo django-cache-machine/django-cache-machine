@@ -2,7 +2,6 @@ from setuptools import setup
 
 import caching
 
-
 setup(
     name='django-cache-machine',
     version=caching.__version__,
@@ -31,6 +30,7 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ]
 )

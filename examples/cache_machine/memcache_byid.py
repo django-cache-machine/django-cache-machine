@@ -1,3 +1,4 @@
-from .settings import *  # flake8: noqa
+# flake8: noqa
+from .settings import *
 
 FETCH_BY_ID = True

@@ -3,6 +3,14 @@
 Release Notes
 ==================
 
+v1.1.0 (2019-02-17)
+-------------------
+
+- Drop official support for unsupported Django versions (1.8, 1.9, and 1.10)
+- Add support for Django 2.0, 2.1, and 2.2 (thanks, @JungleKim and @wetneb!)
+- Add support for Python 3.7
+- Fix Travis
+
 v1.0.0 (2017-10-13)
 -------------------
 

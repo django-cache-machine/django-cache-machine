@@ -3,14 +3,15 @@ from __future__ import unicode_literals
 import functools
 import logging
 
+import django
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.db import models
 from django.db.models import signals
-from django.db.models.sql import query, EmptyResultSet
+from django.db.models.sql import EmptyResultSet, query
 from django.utils import encoding
 
 from caching import config
-from caching.invalidation import invalidator, flush_key, make_key, byid, cache
+from caching.invalidation import byid, cache, flush_key, invalidator, make_key
 
 try:
     # ModelIterable is defined in Django 1.9+, and if it's present, we use it
@@ -30,7 +31,8 @@ log = logging.getLogger('caching')
 
 class CachingManager(models.Manager):
 
-    # Tell Django to use this manager when resolving foreign keys.
+    # This option removed in Django 2.0
+    # Tell Django to use this manager when resolving foreign keys. (Django < 2.0)
     use_for_related_fields = True
 
     def get_queryset(self):
@@ -289,14 +291,24 @@ class CachingMixin(object):
         """Return the cache key for self plus all related foreign keys."""
         fks = dict((f, getattr(self, f.attname)) for f in self._meta.fields
                    if isinstance(f, models.ForeignKey))
-        keys = [fk.rel.to._cache_key(val, incl_db and self._state.db or None)
-                for fk, val in list(fks.items())
-                if val is not None and hasattr(fk.rel.to, '_cache_key')]
+
+        keys = []
+        for fk, val in list(fks.items()):
+            related_model = self._get_fk_related_model(fk)
+            if val is not None and hasattr(related_model, '_cache_key'):
+                keys.append(related_model._cache_key(val, incl_db and self._state.db or None))
+
         return (self.get_cache_key(incl_db=incl_db),) + tuple(keys)
 
     def _flush_keys(self):
         """Return the flush key for self plus all related foreign keys."""
         return map(flush_key, self._cache_keys(incl_db=False))
+
+    def _get_fk_related_model(self, fk):
+        if django.VERSION[0] >= 2:
+            return fk.remote_field.model
+        else:
+            return fk.rel.to
 
 
 class CachingRawQuerySet(models.query.RawQuerySet):
@@ -311,7 +323,10 @@ class CachingRawQuerySet(models.query.RawQuerySet):
         if self.timeout == config.NO_CACHE:
             iterator = iterator()
             while True:
-                yield next(iterator)
+                try:
+                    yield next(iterator)
+                except StopIteration:
+                    return
         else:
             for obj in CachingModelIterable(self, iter_function=iterator, timeout=self.timeout):
                 yield obj

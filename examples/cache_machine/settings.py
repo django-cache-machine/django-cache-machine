@@ -1,5 +1,7 @@
 import os
 
+import django
+
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
@@ -46,3 +48,6 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
+
+if django.VERSION[0] >= 2:
+    MIDDLEWARE = MIDDLEWARE_CLASSES
