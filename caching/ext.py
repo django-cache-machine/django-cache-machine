@@ -2,7 +2,6 @@ from __future__ import unicode_literals
 
 from django.conf import settings
 from django.utils import encoding
-
 from jinja2 import nodes
 from jinja2.ext import Extension
 

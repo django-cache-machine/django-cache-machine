@@ -4,9 +4,9 @@ you don't have a settings.py file.  I can never remember to define
 DJANGO_SETTINGS_MODULE, so I run these commands which get the right env
 automatically.
 """
+import argparse
 import os
 import sys
-import argparse
 from subprocess import call, check_output
 
 NAME = os.path.basename(os.path.dirname(__file__))

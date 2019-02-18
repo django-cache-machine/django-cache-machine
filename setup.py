@@ -2,7 +2,6 @@ from setuptools import setup
 
 import caching
 
-
 setup(
     name='django-cache-machine',
     version=caching.__version__,
