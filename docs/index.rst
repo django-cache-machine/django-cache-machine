@@ -76,6 +76,10 @@ Here's what a minimal cached model looks like::
 
         objects = CachingManager()
 
+        # if you support django 2.0 or more, must set base_manager_name
+        class Meta:
+            base_manager_name = 'objects'  # Field name that assign `Cache Manager`
+
 Whenever you run a query, ``CachingQuerySet`` will try to find that query in
 the cache.  Queries are keyed by ``{prefix}:{sql}``. If it's there, we return
 the cached result set and everyone is happy.  If the query isn't in the cache,

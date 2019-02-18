@@ -1,4 +1,5 @@
-from .redis_settings import *  # flake8: noqa
+# flake8: noqa
+from .redis_settings import *
 
 CACHES = {
     'default': {
