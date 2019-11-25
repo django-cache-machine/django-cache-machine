@@ -188,7 +188,7 @@ Redis Support
 
 Cache Machine support storing flush lists in Redis rather than memcached, which
 is more efficient because Redis can manipulate the lists on the server side
-rather than having to tranfer the entire list back and forth for each
+rather than having to transfer the entire list back and forth for each
 modification.
 
 To enable Redis support for Cache Machine, add the following to your settings
