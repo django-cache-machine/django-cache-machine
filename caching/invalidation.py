@@ -84,6 +84,14 @@ class Invalidator(object):
         if (config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL and
            is_new_instance and model_cls and hasattr(model_cls, 'model_flush_key')):
             flush_keys.append(model_cls.model_flush_key())
+        #add the keys of the related models if cached to flush in case of update
+        if (config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL and
+                not is_new_instance and model_cls and hasattr(model_cls, 'model_flush_key')):
+            flush_keys.append(model_cls.model_flush_key())
+            many_to_many_fields = [field for field in model_cls._meta.many_to_many if
+                                   hasattr(field.remote_field.model, 'model_flush_key')]
+            for k in many_to_many_fields:
+                flush_keys.append(k.remote_field.model.model_flush_key())            
         if not obj_keys or not flush_keys:
             return
         obj_keys, flush_keys = self.expand_flush_lists(obj_keys, flush_keys)
