@@ -74,7 +74,7 @@ def safe_redis(return_type):
 
 class Invalidator(object):
 
-    def invalidate_objects(self, objects, is_new_instance=False, model_cls=None):
+       def invalidate_objects(objects, is_new_instance=False, model_cls=None):
         """Invalidate all the flush lists for the given ``objects``."""
         obj_keys = [k for o in objects for k in o._cache_keys()]
         flush_keys = [k for o in objects for k in o._flush_keys()]
@@ -82,18 +82,24 @@ class Invalidator(object):
         # key in the list to be invalidated. Note that the key itself won't
         # contain anything in the cache, but its corresponding flush key will.
         if (config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL and
-           is_new_instance and model_cls and hasattr(model_cls, 'model_flush_key')):
+                is_new_instance and model_cls and hasattr(model_cls, 'model_flush_key')):
             flush_keys.append(model_cls.model_flush_key())
+        if (config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL and
+                not is_new_instance and model_cls and hasattr(model_cls, 'model_flush_key')):
+            flush_keys.append(model_cls.model_flush_key())
+            many_to_many_fields = [field for field in model_cls._meta.many_to_many if
+                                   hasattr(field.remote_field.model, 'model_flush_key')]
+            for m in many_to_many_fields:
+                flush_keys.append(m.remote_field.model.model_flush_key())
         if not obj_keys or not flush_keys:
             return
-        obj_keys, flush_keys = self.expand_flush_lists(obj_keys, flush_keys)
+        obj_keys, flush_keys = invalidator.expand_flush_lists(obj_keys, flush_keys)
         if obj_keys:
             log.debug('deleting object keys: %s' % obj_keys)
             cache.delete_many(obj_keys)
         if flush_keys:
             log.debug('clearing flush lists: %s' % flush_keys)
-            self.clear_flush_lists(flush_keys)
-
+            invalidator.clear_flush_lists(flush_keys)
     def cache_objects(self, model, objects, query_key, query_flush):
         # Add this query to the flush list of each object.  We include
         # query_flush so that other things can be cached against the queryset
