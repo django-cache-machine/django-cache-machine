@@ -73,8 +73,7 @@ def safe_redis(return_type):
 
 
 class Invalidator(object):
-
-           def invalidate_objects(self, objects, is_new_instance=False, model_cls=None):
+    def invalidate_objects(self, objects, is_new_instance=False, model_cls=None):
         """Invalidate all the flush lists for the given ``objects``."""
         obj_keys = [k for o in objects for k in o._cache_keys()]
         flush_keys = [k for o in objects for k in o._flush_keys()]
@@ -84,6 +83,7 @@ class Invalidator(object):
         if (config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL and
            is_new_instance and model_cls and hasattr(model_cls, 'model_flush_key')):
             flush_keys.append(model_cls.model_flush_key())
+         #invalidate related model key in case of many to many cached tables. 
         if (config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL and
                 not is_new_instance and model_cls and hasattr(model_cls, 'model_flush_key')):
             flush_keys.append(model_cls.model_flush_key())
