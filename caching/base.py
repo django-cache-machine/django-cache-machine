@@ -4,10 +4,11 @@ import functools
 import logging
 
 import django
+from django.core.exceptions import EmptyResultSet
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.db import models
 from django.db.models import signals
-from django.db.models.sql import EmptyResultSet, query
+from django.db.models.sql import query
 from django.utils import encoding
 
 from caching import config
