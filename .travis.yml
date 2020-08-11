@@ -20,16 +20,14 @@ after_success:
 
 matrix:
   include:
-    - python: 2.7
-      env: TOX_ENV="dj111-py27,py27-flake8"
-    - python: 3.4
-      env: TOX_ENV="dj111-py34,dj200-py34"
     - python: 3.5
-      env: TOX_ENV="dj111-py35,dj200-py35,dj210-py35,dj220-py35"
+      env: TOX_ENV="dj220-py35,dj300-py35"
     - python: 3.6
-      env: TOX_ENV="dj111-py36,dj200-py36,dj210-py36,dj220-py36"
+      env: TOX_ENV="dj220-py36"
     - python: 3.7
-      env: TOX_ENV="dj111-py37,dj200-py37,dj210-py37,dj220-py37,py37-flake8,docs"
+      env: TOX_ENV="dj220-py37,dj300-py37,dj310-py37,py37-flake8"
+    - python: 3.8
+      env: TOX_ENV="dj220-py38,dj300-py38,dj310-py38,py38-flake8,docs"
 
 # Adding sudo: False tells Travis to use their container-based infrastructure, which is somewhat faster.
 sudo: False
