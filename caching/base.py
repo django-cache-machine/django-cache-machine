@@ -107,7 +107,7 @@ class CachingModelIterable(ModelIterable):
         # Try to fetch from the cache.
         try:
             query_key = self.query_key()
-        except query.EmptyResultSet:
+        except EmptyResultSet:
             return
 
         cached = cache.get(query_key)
@@ -219,7 +219,7 @@ class CachingQuerySet(models.query.QuerySet):
         super_count = super(CachingQuerySet, self).count
         try:
             query_string = 'count:%s' % self.query_key()
-        except query.EmptyResultSet:
+        except EmptyResultSet:
             return 0
         if self.timeout == config.NO_CACHE or config.TIMEOUT == config.NO_CACHE:
             return super_count()
