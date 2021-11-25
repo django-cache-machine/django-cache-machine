@@ -41,12 +41,12 @@ def make_key(k, with_locale=True):
 
 def flush_key(obj):
     """We put flush lists in the flush: namespace."""
-    key = obj if isinstance(obj, six.string_types) else obj.get_cache_key(incl_db=False)
+    key = obj if isinstance(obj, str) else obj.get_cache_key(incl_db=False)
     return config.FLUSH + make_key(key, with_locale=False)
 
 
 def byid(obj):
-    key = obj if isinstance(obj, six.string_types) else obj.cache_key
+    key = obj if isinstance(obj, str) else obj.cache_key
     return make_key('byid:' + key)
 
 
