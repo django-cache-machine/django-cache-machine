@@ -5,13 +5,14 @@ import functools
 import hashlib
 import logging
 import socket
+import six
+from six.moves.urllib.parse import parse_qsl
 
 from django.conf import settings
 from django.core.cache import cache as default_cache
 from django.core.cache import caches
 from django.core.cache.backends.base import InvalidCacheBackendError
-from django.utils import encoding, six, translation
-from django.utils.six.moves.urllib.parse import parse_qsl
+from django.utils import encoding, translation
 
 from caching import config
 

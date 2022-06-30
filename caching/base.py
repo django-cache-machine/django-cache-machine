@@ -5,9 +5,9 @@ import logging
 
 import django
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
+from django.core.exceptions import EmptyResultSet
 from django.db import models
 from django.db.models import signals
-from django.db.models.sql import EmptyResultSet, query
 from django.utils import encoding
 
 from caching import config
@@ -118,7 +118,7 @@ class CachingModelIterable(ModelIterable):
         # Try to fetch from the cache.
         try:
             query_key = self.query_key()
-        except query.EmptyResultSet:
+        except EmptyResultSet:
             return
 
         cached = cache.get(query_key)
@@ -230,7 +230,7 @@ class CachingQuerySet(models.query.QuerySet):
         super_count = super(CachingQuerySet, self).count
         try:
             query_string = 'count:%s' % self.query_key()
-        except query.EmptyResultSet:
+        except EmptyResultSet:
             return 0
         if self.timeout == config.NO_CACHE or config.TIMEOUT == config.NO_CACHE:
             return super_count()
