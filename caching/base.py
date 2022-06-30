@@ -285,7 +285,7 @@ class CachingMixin(object):
             key_parts = ('o', cls._meta, pk, db)
         else:
             key_parts = ('o', cls._meta, pk)
-        return ':'.join(map(encoding.smart_text, key_parts))
+        return ':'.join(map(encoding.smart_str, key_parts))
 
     def _cache_keys(self, incl_db=True):
         """Return the cache key for self plus all related foreign keys."""
@@ -359,10 +359,10 @@ def cached_with(obj, f, f_key, timeout=DEFAULT_TIMEOUT):
         obj_key = (obj.query_key() if hasattr(obj, 'query_key')
                    else obj.cache_key)
     except (AttributeError, EmptyResultSet):
-        log.warning('%r cannot be cached.' % encoding.smart_text(obj))
+        log.warning('%r cannot be cached.' % encoding.smart_str(obj))
         return f()
 
-    key = '%s:%s' % tuple(map(encoding.smart_text, (f_key, obj_key)))
+    key = '%s:%s' % tuple(map(encoding.smart_str, (f_key, obj_key)))
     # Put the key generated in cached() into this object's flush list.
     invalidator.add_to_flush_list(
         {obj.flush_key(): [_function_cache_key(key)]})
@@ -413,7 +413,7 @@ class MethodWrapper(object):
         kwarg_keys = [(key, k(val)) for key, val in list(kwargs.items())]
         key_parts = ('m', self.obj.cache_key, self.func.__name__,
                      arg_keys, kwarg_keys)
-        key = ':'.join(map(encoding.smart_text, key_parts))
+        key = ':'.join(map(encoding.smart_str, key_parts))
         if key not in self.cache:
             f = functools.partial(self.func, self.obj, *args, **kwargs)
             self.cache[key] = cached_with(self.obj, f, key)
