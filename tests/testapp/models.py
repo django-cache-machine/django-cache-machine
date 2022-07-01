@@ -1,14 +1,7 @@
-from __future__ import unicode_literals
-
 import django
 from django.db import models
-import six
 from caching.base import CachingMixin, CachingManager, cached_method
-
-if six.PY3:
-    from unittest import mock
-else:
-    import mock
+from unittest import mock
 
 
 # This global call counter will be shared among all instances of an Addon.
