@@ -7,11 +7,8 @@ through the ORM.
 
 For full docs, see https://cache-machine.readthedocs.org/en/latest/.
 
-.. image:: https://travis-ci.org/django-cache-machine/django-cache-machine.svg?branch=master
-  :target: https://travis-ci.org/django-cache-machine/django-cache-machine
-
-.. image:: https://coveralls.io/repos/django-cache-machine/django-cache-machine/badge.svg?branch=master
-  :target: https://coveralls.io/r/django-cache-machine/django-cache-machine?branch=master
+.. image:: https://github.com/django-cache-machine/django-cache-machine/actions/workflows/ci.yaml/badge.svg
+  :target: https://github.com/django-cache-machine/django-cache-machine/actions/workflows/ci.yaml
 
 
 Requirements
