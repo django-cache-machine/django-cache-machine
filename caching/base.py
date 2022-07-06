@@ -6,11 +6,11 @@ from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.core.exceptions import EmptyResultSet
 from django.db import models
 from django.db.models import signals
+from django.db.models.query import ModelIterable
 from django.utils import encoding
 
 from caching import config
 from caching.invalidation import byid, cache, flush_key, invalidator, make_key
-from django.db.models.query import ModelIterable
 
 log = logging.getLogger('caching')
 
