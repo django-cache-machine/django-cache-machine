@@ -1,19 +1,19 @@
 from __future__ import unicode_literals
-import jinja2
+
 import logging
 import pickle
 import sys
 import unittest
 
+import jinja2
 from django.conf import settings
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.test import TestCase, TransactionTestCase
-from django.utils import translation, encoding
+from django.utils import encoding, translation
 
-from caching import base, invalidation, config
+from caching import base, config, invalidation
 
 from .testapp.models import Addon, User
-
 
 if sys.version_info >= (3, ):
     from unittest import mock
