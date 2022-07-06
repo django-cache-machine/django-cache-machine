@@ -20,16 +20,16 @@ except ImportError:
 
 # Look for an own cache first before falling back to the default cache
 try:
-    cache = caches['cache_machine']
+    cache = caches["cache_machine"]
 except (InvalidCacheBackendError, ValueError):
     cache = default_cache
 
-log = logging.getLogger('caching.invalidation')
+log = logging.getLogger("caching.invalidation")
 
 
 def make_key(k, with_locale=True):
     """Generate the full key for ``k``, with a prefix."""
-    key = encoding.smart_bytes('%s:%s' % (config.CACHE_PREFIX, k))
+    key = encoding.smart_bytes("%s:%s" % (config.CACHE_PREFIX, k))
     if with_locale:
         key += encoding.smart_bytes(translation.get_language())
     # memcached keys must be < 250 bytes and w/o whitespace, but it's nice
@@ -45,7 +45,7 @@ def flush_key(obj):
 
 def byid(obj):
     key = obj if isinstance(obj, str) else obj.cache_key
-    return make_key('byid:' + key)
+    return make_key("byid:" + key)
 
 
 def safe_redis(return_type):
@@ -54,24 +54,26 @@ def safe_redis(return_type):
 
     return_type (optionally a callable) will be returned if there is an error.
     """
+
     def decorator(f):
         @functools.wraps(f)
         def wrapper(*args, **kw):
             try:
                 return f(*args, **kw)
             except (socket.error, redislib.RedisError) as e:
-                log.error('redis error: %s' % e)
+                log.error("redis error: %s" % e)
                 # log.error('%r\n%r : %r' % (f.__name__, args[1:], kw))
-                if hasattr(return_type, '__call__'):
+                if hasattr(return_type, "__call__"):
                     return return_type()
                 else:
                     return return_type
+
         return wrapper
+
     return decorator
 
 
 class Invalidator(object):
-
     def invalidate_objects(self, objects, is_new_instance=False, model_cls=None):
         """Invalidate all the flush lists for the given ``objects``."""
         obj_keys = [k for o in objects for k in o._cache_keys()]
@@ -79,17 +81,21 @@ class Invalidator(object):
         # If whole-model invalidation on create is enabled, include this model's
         # key in the list to be invalidated. Note that the key itself won't
         # contain anything in the cache, but its corresponding flush key will.
-        if (config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL and
-           is_new_instance and model_cls and hasattr(model_cls, 'model_flush_key')):
+        if (
+            config.CACHE_INVALIDATE_ON_CREATE == config.WHOLE_MODEL
+            and is_new_instance
+            and model_cls
+            and hasattr(model_cls, "model_flush_key")
+        ):
             flush_keys.append(model_cls.model_flush_key())
         if not obj_keys or not flush_keys:
             return
         obj_keys, flush_keys = self.expand_flush_lists(obj_keys, flush_keys)
         if obj_keys:
-            log.debug('deleting object keys: %s' % obj_keys)
+            log.debug("deleting object keys: %s" % obj_keys)
             cache.delete_many(obj_keys)
         if flush_keys:
-            log.debug('clearing flush lists: %s' % flush_keys)
+            log.debug("clearing flush lists: %s" % flush_keys)
             self.clear_flush_lists(flush_keys)
 
     def cache_objects(self, model, objects, query_key, query_flush):
@@ -100,7 +106,7 @@ class Invalidator(object):
 
         flush_lists = collections.defaultdict(set)
         for key in flush_keys:
-            log.debug('adding %s to %s' % (query_flush, key))
+            log.debug("adding %s to %s" % (query_flush, key))
             flush_lists[key].add(query_flush)
         flush_lists[query_flush].add(query_key)
         # Add this query to the flush key for the entire model, if enabled
@@ -112,7 +118,7 @@ class Invalidator(object):
             obj_flush = obj.flush_key()
             for key in obj._flush_keys():
                 if key not in (obj_flush, model_flush):
-                    log.debug('related: adding %s to %s' % (obj_flush, key))
+                    log.debug("related: adding %s to %s" % (obj_flush, key))
                     flush_lists[key].add(obj_flush)
                 if config.FETCH_BY_ID:
                     flush_lists[key].add(byid(obj))
@@ -125,7 +131,7 @@ class Invalidator(object):
         The search starts with the lists in `keys` and expands to any flush
         lists found therein.  Returns ({objects to flush}, {flush keys found}).
         """
-        log.debug('in expand_flush_lists')
+        log.debug("in expand_flush_lists")
         obj_keys = set(obj_keys)
         search_keys = flush_keys = set(flush_keys)
 
@@ -139,7 +145,7 @@ class Invalidator(object):
                 else:
                     obj_keys.add(key)
             if new_keys:
-                log.debug('search for %s found keys %s' % (search_keys, new_keys))
+                log.debug("search for %s found keys %s" % (search_keys, new_keys))
                 flush_keys.update(new_keys)
                 search_keys = new_keys
             else:
@@ -158,9 +164,11 @@ class Invalidator(object):
 
     def get_flush_lists(self, keys):
         """Return a set of object keys from the lists in `keys`."""
-        return set(e for flush_list in
-                   [_f for _f in list(cache.get_many(keys).values()) if _f]
-                   for e in flush_list)
+        return set(
+            e
+            for flush_list in [_f for _f in list(cache.get_many(keys).values()) if _f]
+            for e in flush_list
+        )
 
     def clear_flush_lists(self, keys):
         """Remove the given keys from the database."""
@@ -168,11 +176,10 @@ class Invalidator(object):
 
 
 class RedisInvalidator(Invalidator):
-
     def safe_key(self, key):
-        if ' ' in key or '\n' in key:
+        if " " in key or "\n" in key:
             log.warning('BAD KEY: "%s"' % key)
-            return ''
+            return ""
         return key
 
     @safe_redis(None)
@@ -183,13 +190,13 @@ class RedisInvalidator(Invalidator):
             for query_key in list_:
                 # Redis happily accepts unicode, but returns byte strings,
                 # so manually encode and decode the keys on the flush list here
-                pipe.sadd(self.safe_key(key), query_key.encode('utf-8'))
+                pipe.sadd(self.safe_key(key), query_key.encode("utf-8"))
         pipe.execute()
 
     @safe_redis(set)
     def get_flush_lists(self, keys):
         flush_list = redis.sunion(list(map(self.safe_key, keys)))
-        return [k.decode('utf-8') for k in flush_list]
+        return [k.decode("utf-8") for k in flush_list]
 
     @safe_redis(None)
     def clear_flush_lists(self, keys):
@@ -197,7 +204,6 @@ class RedisInvalidator(Invalidator):
 
 
 class NullInvalidator(Invalidator):
-
     def add_to_flush_list(self, mapping):
         return
 
@@ -207,23 +213,22 @@ def parse_backend_uri(backend_uri):
     Converts the "backend_uri" into a host and any extra params that are
     required for the backend. Returns a (host, params) tuple.
     """
-    backend_uri_sliced = backend_uri.split('://')
+    backend_uri_sliced = backend_uri.split("://")
     if len(backend_uri_sliced) > 2:
-        raise InvalidCacheBackendError(
-            "Backend URI can't have more than one scheme://")
+        raise InvalidCacheBackendError("Backend URI can't have more than one scheme://")
     elif len(backend_uri_sliced) == 2:
         rest = backend_uri_sliced[1]
     else:
         rest = backend_uri_sliced[0]
 
     host = rest
-    qpos = rest.find('?')
+    qpos = rest.find("?")
     if qpos != -1:
-        params = dict(parse_qsl(rest[qpos + 1:]))
+        params = dict(parse_qsl(rest[qpos + 1 :]))
         host = rest[:qpos]
     else:
         params = {}
-    if host.endswith('/'):
+    if host.endswith("/"):
         host = host[:-1]
 
     return host, params
@@ -233,27 +238,28 @@ def get_redis_backend():
     """Connect to redis from a string like CACHE_BACKEND."""
     # From django-redis-cache.
     server, params = parse_backend_uri(settings.REDIS_BACKEND)
-    db = params.pop('db', 0)
+    db = params.pop("db", 0)
     try:
         db = int(db)
     except (ValueError, TypeError):
         db = 0
     try:
-        socket_timeout = float(params.pop('socket_timeout'))
+        socket_timeout = float(params.pop("socket_timeout"))
     except (KeyError, ValueError):
         socket_timeout = None
-    password = params.pop('password', None)
-    if ':' in server:
-        host, port = server.split(':')
+    password = params.pop("password", None)
+    if ":" in server:
+        host, port = server.split(":")
         try:
             port = int(port)
         except (ValueError, TypeError):
             port = 6379
     else:
-        host = 'localhost'
+        host = "localhost"
         port = 6379
-    return redislib.Redis(host=host, port=port, db=db, password=password,
-                          socket_timeout=socket_timeout)
+    return redislib.Redis(
+        host=host, port=port, db=db, password=password, socket_timeout=socket_timeout
+    )
 
 
 if config.CACHE_MACHINE_NO_INVALIDATION:
