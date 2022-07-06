@@ -1,30 +1,16 @@
-from __future__ import unicode_literals
-
 import functools
 import logging
 
 import django
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
+from django.core.exceptions import EmptyResultSet
 from django.db import models
 from django.db.models import signals
-from django.db.models.sql import EmptyResultSet, query
 from django.utils import encoding
 
 from caching import config
 from caching.invalidation import byid, cache, flush_key, invalidator, make_key
-
-try:
-    # ModelIterable is defined in Django 1.9+, and if it's present, we use it
-    # iterate over our results.
-    from django.db.models.query import ModelIterable
-except ImportError:
-    # If not, define a Django 1.8-compatible stub we can use instead.
-    class ModelIterable(object):
-        def __init__(self, queryset):
-            self.queryset = queryset
-
-        def __iter__(self):
-            return super(CachingQuerySet, self.queryset).iterator()
+from django.db.models.query import ModelIterable
 
 log = logging.getLogger('caching')
 
@@ -118,7 +104,7 @@ class CachingModelIterable(ModelIterable):
         # Try to fetch from the cache.
         try:
             query_key = self.query_key()
-        except query.EmptyResultSet:
+        except EmptyResultSet:
             return
 
         cached = cache.get(query_key)
@@ -230,7 +216,7 @@ class CachingQuerySet(models.query.QuerySet):
         super_count = super(CachingQuerySet, self).count
         try:
             query_string = 'count:%s' % self.query_key()
-        except query.EmptyResultSet:
+        except EmptyResultSet:
             return 0
         if self.timeout == config.NO_CACHE or config.TIMEOUT == config.NO_CACHE:
             return super_count()
@@ -285,7 +271,7 @@ class CachingMixin(object):
             key_parts = ('o', cls._meta, pk, db)
         else:
             key_parts = ('o', cls._meta, pk)
-        return ':'.join(map(encoding.smart_text, key_parts))
+        return ':'.join(map(encoding.smart_str, key_parts))
 
     def _cache_keys(self, incl_db=True):
         """Return the cache key for self plus all related foreign keys."""
@@ -359,10 +345,10 @@ def cached_with(obj, f, f_key, timeout=DEFAULT_TIMEOUT):
         obj_key = (obj.query_key() if hasattr(obj, 'query_key')
                    else obj.cache_key)
     except (AttributeError, EmptyResultSet):
-        log.warning('%r cannot be cached.' % encoding.smart_text(obj))
+        log.warning('%r cannot be cached.' % encoding.smart_str(obj))
         return f()
 
-    key = '%s:%s' % tuple(map(encoding.smart_text, (f_key, obj_key)))
+    key = '%s:%s' % tuple(map(encoding.smart_str, (f_key, obj_key)))
     # Put the key generated in cached() into this object's flush list.
     invalidator.add_to_flush_list(
         {obj.flush_key(): [_function_cache_key(key)]})
@@ -413,7 +399,7 @@ class MethodWrapper(object):
         kwarg_keys = [(key, k(val)) for key, val in list(kwargs.items())]
         key_parts = ('m', self.obj.cache_key, self.func.__name__,
                      arg_keys, kwarg_keys)
-        key = ':'.join(map(encoding.smart_text, key_parts))
+        key = ':'.join(map(encoding.smart_str, key_parts))
         if key not in self.cache:
             f = functools.partial(self.func, self.obj, *args, **kwargs)
             self.cache[key] = cached_with(self.obj, f, key)

@@ -37,7 +37,7 @@ def main():
     args = parser.parse_args()
     settings = args.settings and [args.settings] or SETTINGS
     results = []
-    django_admin = check_output(['which', 'django-admin.py']).strip()
+    django_admin = check_output(['which', 'django-admin']).strip()
     for i, settings_module in enumerate(settings):
         print('Running tests for: %s' % settings_module)
         os.environ['DJANGO_SETTINGS_MODULE'] = 'cache_machine.%s' % settings_module
