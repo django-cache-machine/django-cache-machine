@@ -15,21 +15,25 @@ class User(CachingMixin, models.Model):
     objects = CachingManager()
 
     if django.VERSION[0] >= 2:
+
         class Meta:
-            # Tell Django to use this manager when resolving foreign keys. (Django >= 2.0)
-            base_manager_name = 'objects'
+            # Tell Django to use this manager when resolving foreign keys.
+            # (Django >= 2.0)
+            base_manager_name = "objects"
 
 
 class Addon(CachingMixin, models.Model):
     val = models.IntegerField()
     author1 = models.ForeignKey(User, on_delete=models.CASCADE)
-    author2 = models.ForeignKey(User, related_name='author2_set', on_delete=models.CASCADE)
+    author2 = models.ForeignKey(
+        User, related_name="author2_set", on_delete=models.CASCADE
+    )
 
     objects = CachingManager()
 
     class Meta:
         # without this, Postgres & SQLite return objects in different orders:
-        ordering = ('pk',)
+        ordering = ("pk",)
 
     @cached_method
     def calls(self, arg=1):

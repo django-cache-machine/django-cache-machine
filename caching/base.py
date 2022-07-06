@@ -12,7 +12,7 @@ from django.utils import encoding
 from caching import config
 from caching.invalidation import byid, cache, flush_key, invalidator, make_key
 
-log = logging.getLogger('caching')
+log = logging.getLogger("caching")
 
 
 class CachingManager(models.Manager):
@@ -30,8 +30,9 @@ class CachingManager(models.Manager):
         return super(CachingManager, self).contribute_to_class(cls, name)
 
     def post_save(self, instance, **kwargs):
-        self.invalidate(instance, is_new_instance=kwargs['created'],
-                        model_cls=kwargs['sender'])
+        self.invalidate(
+            instance, is_new_instance=kwargs["created"], model_cls=kwargs["sender"]
+        )
 
     def post_delete(self, instance, **kwargs):
         self.invalidate(instance)
@@ -41,8 +42,9 @@ class CachingManager(models.Manager):
         invalidator.invalidate_objects(objects, **kwargs)
 
     def raw(self, raw_query, params=None, *args, **kwargs):
-        return CachingRawQuerySet(raw_query, self.model, params=params,
-                                  using=self._db, *args, **kwargs)
+        return CachingRawQuerySet(
+            raw_query, self.model, params=params, using=self._db, *args, **kwargs
+        )
 
     def cache(self, timeout=DEFAULT_TIMEOUT):
         return self.get_queryset().cache(timeout)
@@ -61,9 +63,9 @@ class CachingModelIterable(ModelIterable):
     """
 
     def __init__(self, queryset, *args, **kwargs):
-        self.iter_function = kwargs.pop('iter_function', None)
-        self.timeout = kwargs.pop('timeout', queryset.timeout)
-        self.db = kwargs.pop('db', queryset.db)
+        self.iter_function = kwargs.pop("iter_function", None)
+        self.timeout = kwargs.pop("timeout", queryset.timeout)
+        self.db = kwargs.pop("db", queryset.db)
         super(CachingModelIterable, self).__init__(queryset, *args, **kwargs)
 
     def query_key(self):
@@ -75,14 +77,14 @@ class CachingModelIterable(ModelIterable):
         primary), throwing a Django ValueError in the process. Django prevents
         cross DB model saving among related objects.
         """
-        query_db_string = 'qs:%s::db:%s' % (self.queryset.query_key(), self.db)
+        query_db_string = "qs:%s::db:%s" % (self.queryset.query_key(), self.db)
         return make_key(query_db_string, with_locale=False)
 
     def cache_objects(self, objects, query_key):
         """Cache query_key => objects, then update the flush lists."""
-        log.debug('query_key: %s' % query_key)
+        log.debug("query_key: %s" % query_key)
         query_flush = flush_key(self.queryset.query_key())
-        log.debug('query_flush: %s' % query_flush)
+        log.debug("query_flush: %s" % query_flush)
         cache.add(query_key, objects, timeout=self.timeout)
         invalidator.cache_objects(self.queryset.model, objects, query_key, query_flush)
 
@@ -109,14 +111,14 @@ class CachingModelIterable(ModelIterable):
 
         cached = cache.get(query_key)
         if cached is not None:
-            log.debug('cache hit: %s' % query_key)
+            log.debug("cache hit: %s" % query_key)
             for obj in cached:
                 obj.from_cache = True
                 yield obj
             return
 
         # Use the special FETCH_BY_ID iterator if configured.
-        if config.FETCH_BY_ID and hasattr(self.queryset, 'fetch_by_id'):
+        if config.FETCH_BY_ID and hasattr(self.queryset, "fetch_by_id"):
             iterator = self.queryset.fetch_by_id
 
         # No cached results. Do the database query, and cache it once we have
@@ -132,7 +134,7 @@ class CachingModelIterable(ModelIterable):
 
 class CachingQuerySet(models.query.QuerySet):
 
-    _default_timeout_pickle_key = '__DEFAULT_TIMEOUT__'
+    _default_timeout_pickle_key = "__DEFAULT_TIMEOUT__"
 
     def __init__(self, *args, **kw):
         super(CachingQuerySet, self).__init__(*args, **kw)
@@ -148,11 +150,11 @@ class CachingQuerySet(models.query.QuerySet):
         state = dict()
         state.update(self.__dict__)
         if self.timeout == DEFAULT_TIMEOUT:
-            state['timeout'] = self._default_timeout_pickle_key
+            state["timeout"] = self._default_timeout_pickle_key
         return state
 
     def __setstate__(self, state):
-        """ Safely unpickle our timeout if it's a DEFAULT_TIMEOUT. """
+        """Safely unpickle our timeout if it's a DEFAULT_TIMEOUT."""
         self.__dict__.update(state)
         if self.timeout == self._default_timeout_pickle_key:
             self.timeout = DEFAULT_TIMEOUT
@@ -179,11 +181,12 @@ class CachingQuerySet(models.query.QuerySet):
         """
         # Include columns from extra since they could be used in the query's
         # order_by.
-        vals = self.values_list('pk', *list(self.query.extra.keys()))
+        vals = self.values_list("pk", *list(self.query.extra.keys()))
         pks = [val[0] for val in vals]
         keys = dict((byid(self.model._cache_key(pk, self.db)), pk) for pk in pks)
-        cached = dict((k, v) for k, v in list(cache.get_many(keys).items())
-                      if v is not None)
+        cached = dict(
+            (k, v) for k, v in list(cache.get_many(keys).items()) if v is not None
+        )
 
         # Pick up the objects we missed.
         missed = [pk for key, pk in list(keys.items()) if key not in cached]
@@ -206,7 +209,7 @@ class CachingQuerySet(models.query.QuerySet):
         others.query.clear_limits()
         # Clear out the default ordering since we order based on the query.
         others = others.order_by().filter(pk__in=pks)
-        if hasattr(others, 'no_cache'):
+        if hasattr(others, "no_cache"):
             others = others.no_cache()
         if self.query.select_related:
             others.query.select_related = self.query.select_related
@@ -215,7 +218,7 @@ class CachingQuerySet(models.query.QuerySet):
     def count(self):
         super_count = super(CachingQuerySet, self).count
         try:
-            query_string = 'count:%s' % self.query_key()
+            query_string = "count:%s" % self.query_key()
         except EmptyResultSet:
             return 0
         if self.timeout == config.NO_CACHE or config.TIMEOUT == config.NO_CACHE:
@@ -249,6 +252,7 @@ class CachingMixin(object):
         # This ensures all cached copies of an object will be invalidated
         # regardless of the DB on which they're modified/deleted.
         return self._cache_key(self.pk, incl_db and self._state.db or None)
+
     cache_key = property(get_cache_key)
 
     @classmethod
@@ -258,7 +262,7 @@ class CachingMixin(object):
         """
         # use dummy PK and DB reference that will never resolve to an actual
         # cache key for an object
-        return flush_key(cls._cache_key('all-pks', 'all-dbs'))
+        return flush_key(cls._cache_key("all-pks", "all-dbs"))
 
     @classmethod
     def _cache_key(cls, pk, db=None):
@@ -268,21 +272,26 @@ class CachingMixin(object):
         For the Addon class, with a pk of 2, we get "o:addons.addon:2".
         """
         if db:
-            key_parts = ('o', cls._meta, pk, db)
+            key_parts = ("o", cls._meta, pk, db)
         else:
-            key_parts = ('o', cls._meta, pk)
-        return ':'.join(map(encoding.smart_str, key_parts))
+            key_parts = ("o", cls._meta, pk)
+        return ":".join(map(encoding.smart_str, key_parts))
 
     def _cache_keys(self, incl_db=True):
         """Return the cache key for self plus all related foreign keys."""
-        fks = dict((f, getattr(self, f.attname)) for f in self._meta.fields
-                   if isinstance(f, models.ForeignKey))
+        fks = dict(
+            (f, getattr(self, f.attname))
+            for f in self._meta.fields
+            if isinstance(f, models.ForeignKey)
+        )
 
         keys = []
         for fk, val in list(fks.items()):
             related_model = self._get_fk_related_model(fk)
-            if val is not None and hasattr(related_model, '_cache_key'):
-                keys.append(related_model._cache_key(val, incl_db and self._state.db or None))
+            if val is not None and hasattr(related_model, "_cache_key"):
+                keys.append(
+                    related_model._cache_key(val, incl_db and self._state.db or None)
+                )
 
         return (self.get_cache_key(incl_db=incl_db),) + tuple(keys)
 
@@ -298,9 +307,8 @@ class CachingMixin(object):
 
 
 class CachingRawQuerySet(models.query.RawQuerySet):
-
     def __init__(self, *args, **kw):
-        timeout = kw.pop('timeout', DEFAULT_TIMEOUT)
+        timeout = kw.pop("timeout", DEFAULT_TIMEOUT)
         super(CachingRawQuerySet, self).__init__(*args, **kw)
         self.timeout = timeout
 
@@ -314,7 +322,9 @@ class CachingRawQuerySet(models.query.RawQuerySet):
                 except StopIteration:
                     return
         else:
-            for obj in CachingModelIterable(self, iter_function=iterator, timeout=self.timeout):
+            for obj in CachingModelIterable(
+                self, iter_function=iterator, timeout=self.timeout
+            ):
                 yield obj
 
     def query_key(self):
@@ -322,7 +332,7 @@ class CachingRawQuerySet(models.query.RawQuerySet):
 
 
 def _function_cache_key(key):
-    return make_key('f:%s' % key, with_locale=True)
+    return make_key("f:%s" % key, with_locale=True)
 
 
 def cached(function, key_, duration=DEFAULT_TIMEOUT):
@@ -330,11 +340,11 @@ def cached(function, key_, duration=DEFAULT_TIMEOUT):
     key = _function_cache_key(key_)
     val = cache.get(key)
     if val is None:
-        log.debug('cache miss for %s' % key)
+        log.debug("cache miss for %s" % key)
         val = function()
         cache.set(key, val, duration)
     else:
-        log.debug('cache hit for %s' % key)
+        log.debug("cache hit for %s" % key)
     return val
 
 
@@ -342,16 +352,14 @@ def cached_with(obj, f, f_key, timeout=DEFAULT_TIMEOUT):
     """Helper for caching a function call within an object's flush list."""
 
     try:
-        obj_key = (obj.query_key() if hasattr(obj, 'query_key')
-                   else obj.cache_key)
+        obj_key = obj.query_key() if hasattr(obj, "query_key") else obj.cache_key
     except (AttributeError, EmptyResultSet):
-        log.warning('%r cannot be cached.' % encoding.smart_str(obj))
+        log.warning("%r cannot be cached." % encoding.smart_str(obj))
         return f()
 
-    key = '%s:%s' % tuple(map(encoding.smart_str, (f_key, obj_key)))
+    key = "%s:%s" % tuple(map(encoding.smart_str, (f_key, obj_key)))
     # Put the key generated in cached() into this object's flush list.
-    invalidator.add_to_flush_list(
-        {obj.flush_key(): [_function_cache_key(key)]})
+    invalidator.add_to_flush_list({obj.flush_key(): [_function_cache_key(key)]})
     return cached(f, key, timeout)
 
 
@@ -364,6 +372,7 @@ class cached_method(object):
 
     Lifted from werkzeug.
     """
+
     def __init__(self, func):
         self.func = func
         functools.update_wrapper(self, func)
@@ -387,6 +396,7 @@ class MethodWrapper(object):
     The first call for a set of (args, kwargs) will use an external cache.
     After that, an object-local dict cache will be used.
     """
+
     def __init__(self, obj, func):
         self.obj = obj
         self.func = func
@@ -394,12 +404,13 @@ class MethodWrapper(object):
         self.cache = {}
 
     def __call__(self, *args, **kwargs):
-        def k(o): return o.cache_key if hasattr(o, 'cache_key') else o
+        def k(o):
+            return o.cache_key if hasattr(o, "cache_key") else o
+
         arg_keys = list(map(k, args))
         kwarg_keys = [(key, k(val)) for key, val in list(kwargs.items())]
-        key_parts = ('m', self.obj.cache_key, self.func.__name__,
-                     arg_keys, kwarg_keys)
-        key = ':'.join(map(encoding.smart_str, key_parts))
+        key_parts = ("m", self.obj.cache_key, self.func.__name__, arg_keys, kwarg_keys)
+        key = ":".join(map(encoding.smart_str, key_parts))
         if key not in self.cache:
             f = functools.partial(self.func, self.obj, *args, **kwargs)
             self.cache[key] = cached_with(self.obj, f, key)
