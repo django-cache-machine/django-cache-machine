@@ -105,7 +105,7 @@ cleared.  To avoid stale foreign key relations, any cached objects will be
 flushed when the object their foreign key points to is invalidated.
 
 During cache invalidation, we explicitly set a None value instead of just
-deleting so we don't have any race condtions where:
+deleting so we don't have any race conditions where:
 
  * Thread 1 -> Cache miss, get object from DB
  * Thread 2 -> Object saved, deleted from cache
