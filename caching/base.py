@@ -71,8 +71,8 @@ class CachingModelIterable(ModelIterable):
         Generate the cache key for this query.
 
         Database router info is included to avoid the scenario where related
-        cached objects from one DB (e.g. slave) are saved in another DB (e.g.
-        master), throwing a Django ValueError in the process. Django prevents
+        cached objects from one DB (e.g. replica) are saved in another DB (e.g.
+        primary), throwing a Django ValueError in the process. Django prevents
         cross DB model saving among related objects.
         """
         query_db_string = 'qs:%s::db:%s' % (self.queryset.query_key(), self.db)
@@ -318,7 +318,7 @@ class CachingRawQuerySet(models.query.RawQuerySet):
                 yield obj
 
     def query_key(self):
-        return self.raw_query % tuple(self.params)
+        return self.raw_query % tuple(self.params or [])
 
 
 def _function_cache_key(key):
