@@ -9,7 +9,7 @@ on:
       - main
   schedule:
     # run once a week on early monday mornings
-    - cron: '22 2 * * 1'
+    - cron: "22 2 * * 1"
 
 jobs:
   pre-commit:
@@ -25,7 +25,7 @@ jobs:
       matrix:
         # tox-gh-actions will only run the tox environments which match the currently
         # running python-version. See [gh-actions] in tox.ini for the mapping
-        python-version: [3.6, 3.7, 3.8, 3.9, '3.10']
+        python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
     # Service containers to run with `test-job`
     services:
       memcached:
