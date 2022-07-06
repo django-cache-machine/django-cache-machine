@@ -1,0 +1,86 @@
+name: lint-test
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  schedule:
+    # run once a week on early monday mornings
+    - cron: '22 2 * * 1'
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: pre-commit/action@v2.0.0
+
+  test-job:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        # tox-gh-actions will only run the tox environments which match the currently
+        # running python-version. See [gh-actions] in tox.ini for the mapping
+        python-version: [3.6, 3.7, 3.8, 3.9, '3.10']
+    # Service containers to run with `test-job`
+    services:
+      memcached:
+        image: memcached
+        ports:
+          - 11211:11211
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      postgres-default:
+        image: postgres
+        env:
+          POSTGRES_USER: default
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # use port 5432 for default DB
+          - 5432:5432
+      postgres-primary2:
+        image: postgres
+        env:
+          POSTGRES_USER: primary2
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # use port 5433 for primary2 DB
+          - 5433:5432
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: "**/dev-requirements.txt"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r dev-requirements.txt
+      - name: Test with tox
+        env:
+          DATABASE_URL: postgres://default:postgres@localhost:5432/default
+          DATABASE_URL_2: postgres://primary2:postgres@localhost:5433/primary2
+        run: tox

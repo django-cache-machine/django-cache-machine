@@ -3,6 +3,14 @@
 Release Notes
 ==================
 
+v1.2.0 (2022-07-06)
+-------------------
+
+- Drop official support for unsupported Django versions (1.11, 2.0, 2.1)
+- Add support for Django 3.0, 3.1, 3.2, and 4.0 (thanks, @johanneswilm and @Afani97!)
+- Add support for Python 3.8, 3.9, and 3.10
+- Switch to GitHub Actions
+
 v1.1.0 (2019-02-17)
 -------------------
 
@@ -38,8 +46,8 @@ v0.9.1 (2015-10-22)
 - Fix bug that prevented caching objects forever when using Django <= 1.5
   (see PR #104)
 - Fix regression (introduced in 0.8) that broke invalidation when an object
-  was cached via a slave database and later modified or deleted via the
-  master database, when using master/slave replication (see PR #105). Note
+  was cached via a replica database and later modified or deleted via the
+  primary database, when using primary/replica replication (see PR #105). Note
   this change may cause unexpected invalidation when sharding across DBs
   that share both a schema and primary key values or other attributes.
 

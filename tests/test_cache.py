@@ -555,57 +555,60 @@ class CachingTestCase(TestCase):
 # use TransactionTestCase so that ['TEST']['MIRROR'] setting works
 # see https://code.djangoproject.com/ticket/23718
 class MultiDbTestCase(TransactionTestCase):
-    multi_db = True
+    databases = {'default', 'primary2', 'replica', 'replica2'}
     fixtures = ['tests/testapp/fixtures/testapp/test_cache.json']
     extra_apps = ['tests.testapp']
 
     def test_multidb_cache(self):
-        """ Test where master and slave DB result in two different cache keys """
+        """ Test where primary and replica DB result in two different cache keys """
         self.assertIs(Addon.objects.get(id=1).from_cache, False)
         self.assertIs(Addon.objects.get(id=1).from_cache, True)
 
-        from_slave = Addon.objects.using('slave').get(id=1)
-        self.assertIs(from_slave.from_cache, False)
-        self.assertEqual(from_slave._state.db, 'slave')
+        from_replica = Addon.objects.using('replica').get(id=1)
+        self.assertIs(from_replica.from_cache, False)
+        self.assertEqual(from_replica._state.db, 'replica')
 
     def test_multidb_fetch_by_id(self):
-        """ Test where master and slave DB result in two different cache keys with FETCH_BY_ID"""
+        """ Test where primary and replica DB result in two different cache keys with FETCH_BY_ID"""
         with self.settings(FETCH_BY_ID=True):
             self.assertIs(Addon.objects.get(id=1).from_cache, False)
             self.assertIs(Addon.objects.get(id=1).from_cache, True)
 
-            from_slave = Addon.objects.using('slave').get(id=1)
-            self.assertIs(from_slave.from_cache, False)
-            self.assertEqual(from_slave._state.db, 'slave')
+            from_replica = Addon.objects.using('replica').get(id=1)
+            self.assertIs(from_replica.from_cache, False)
+            self.assertEqual(from_replica._state.db, 'replica')
 
-    def test_multidb_master_slave_invalidation(self):
+    def test_multidb_primary_replica_invalidation(self):
         """ Test saving an object on one DB invalidates it for all DBs """
         log.debug('priming the DB & cache')
-        master_obj = User.objects.using('default').create(name='new-test-user')
-        slave_obj = User.objects.using('slave').get(name='new-test-user')
-        self.assertIs(slave_obj.from_cache, False)
+        primary_obj = User.objects.using('default').create(name='new-test-user')
+        replica_obj = User.objects.using('replica').get(name='new-test-user')
+        self.assertIs(replica_obj.from_cache, False)
         log.debug('deleting the original object')
-        User.objects.using('default').filter(pk=slave_obj.pk).delete()
+        User.objects.using('default').filter(pk=replica_obj.pk).delete()
         log.debug('re-creating record with a new primary key')
-        master_obj = User.objects.using('default').create(name='new-test-user')
+        primary_obj = User.objects.using('default').create(name='new-test-user')
         log.debug('attempting to force re-fetch from DB (should not use cache)')
-        slave_obj = User.objects.using('slave').get(name='new-test-user')
-        self.assertIs(slave_obj.from_cache, False)
-        self.assertEqual(slave_obj.pk, master_obj.pk)
+        replica_obj = User.objects.using('replica').get(name='new-test-user')
+        self.assertIs(replica_obj.from_cache, False)
+        self.assertEqual(replica_obj.pk, primary_obj.pk)
 
     def test_multidb_no_db_crossover(self):
         """ Test no crossover of objects with identical PKs """
-        master_obj = User.objects.using('default').create(name='new-test-user')
-        master_obj2 = User.objects.using('master2').create(pk=master_obj.pk, name='other-test-user')
+        primary_obj = User.objects.using('default').create(name='new-test-user')
+        primary_obj2 = User.objects.using('primary2').create(
+            pk=primary_obj.pk,
+            name='other-test-user',
+        )
         # prime the cache for the default DB
-        master_obj = User.objects.using('default').get(name='new-test-user')
-        self.assertIs(master_obj.from_cache, False)
-        master_obj = User.objects.using('default').get(name='new-test-user')
-        self.assertIs(master_obj.from_cache, True)
-        # prime the cache for the 2nd master DB
-        master_obj2 = User.objects.using('master2').get(name='other-test-user')
-        self.assertIs(master_obj2.from_cache, False)
-        master_obj2 = User.objects.using('master2').get(name='other-test-user')
-        self.assertIs(master_obj2.from_cache, True)
+        primary_obj = User.objects.using('default').get(name='new-test-user')
+        self.assertIs(primary_obj.from_cache, False)
+        primary_obj = User.objects.using('default').get(name='new-test-user')
+        self.assertIs(primary_obj.from_cache, True)
+        # prime the cache for the 2nd primary DB
+        primary_obj2 = User.objects.using('primary2').get(name='other-test-user')
+        self.assertIs(primary_obj2.from_cache, False)
+        primary_obj2 = User.objects.using('primary2').get(name='other-test-user')
+        self.assertIs(primary_obj2.from_cache, True)
         # ensure no crossover between databases
-        self.assertNotEqual(master_obj.name, master_obj2.name)
+        self.assertNotEqual(primary_obj.name, primary_obj2.name)

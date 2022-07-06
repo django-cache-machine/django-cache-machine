@@ -1,10 +1,12 @@
 # These are the reqs to build docs and run tests.
 sphinx
-django-nose
 django-redis
 jinja2
 redis
 flake8
 coverage
-psycopg2
+psycopg2-binary
+dj-database-url
 python-memcached>=1.58
+tox
+tox-gh-actions
